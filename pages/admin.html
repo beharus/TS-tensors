@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TS-TujjorS - Admin Panel</title>
+    <link rel="stylesheet" href="../styles/admin.css" />
+    <!-- font awesome -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css"
+      integrity="sha512-2SwdPD6INVrV/lHTZbO2nodKhrnDdJK9/kg2XD1r9uGqPo1cUbujc+IYdlYdEErWNu69gVcYgdxlmVmzTWnetw=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    />
+</head>
+<body>
+    <header>
+        <div class="header-container">
+            <a href="#" class="logo">TS-<span>TujjorS</span> <small>Admin</small></a>
+            <div class="admin-actions">
+                <button class="save-btn" id="saveAllBtn">
+                    <i class="fa-solid fa-floppy-disk"></i>
+                    Barchasini saqlash
+                </button>
+                <a href="index.html" class="back-to-site">
+                    <i class="fa-solid fa-store"></i>
+                    Saytga qaytish
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <h1 class="page-title">Mahsulotlarni boshqarish</h1>
+            
+            <div class="admin-stats">
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fa-solid fa-cube"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3 id="totalProducts">0</h3>
+                        <p>Jami mahsulotlar</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fa-solid fa-pen-to-square"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3 id="modifiedProducts">0</h3>
+                        <p>O'zgartirilgan</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="products-grid" id="productsContainer">
+                <!-- Products will be loaded here by JavaScript -->
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <div class="footer-container">
+            <p>&copy; 2024 TS-TujjorS. Admin Panel. Barcha huquqlar himoyalangan.</p>
+        </div>
+    </footer>
+
+    <script src="../script/admin.js"></script>
+</body>
+</html>
