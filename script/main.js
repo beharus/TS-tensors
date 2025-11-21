@@ -524,3 +524,6 @@ document.addEventListener("DOMContentLoaded", () => {
   renderProducts(products, currentPage);
   updateCartCount();
 });
+
+
+fetch('')
