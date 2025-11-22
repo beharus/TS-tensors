@@ -5,7 +5,7 @@ import AdminProductCard from '../components/AdminProductCard';
 import ToastContainer from '../components/ToastContainer';
 import useToast from '../hooks/useToast';
 
-const API_BASE_URL = "http://45.94.209.80:8003";
+const API_BASE_URL = "https://tujjors.uz";
 
 const Admin = () => {
   const { firstId, secondId } = useParams();
@@ -31,67 +31,52 @@ const Admin = () => {
     try {
       // Test if API server is reachable
       const testUrl = `${API_BASE_URL}/${firstId}/change/${secondId}`;
-      const proxyTestUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(testUrl)}`;
       
-      const proxyResponse = await fetch(proxyTestUrl);
-      console.log("🔧 Proxy test result:", proxyResponse.status);
+      const response = await fetch(testUrl, {
+        method: 'GET',
+        mode: 'cors',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+      });
       
-      return proxyResponse.ok;
+      console.log("🔧 Direct API test result:", response.status);
+      return response.ok;
     } catch (error) {
       console.error("❌ API connectivity test failed:", error);
       return false;
     }
   };
 
-  // Simple fetch function with better error handling
+  // Simple fetch function with direct API calls
   const apiFetch = async (url, options = {}) => {
     const isGet = !options.method || options.method === 'GET';
     
     try {
-      if (isGet) {
-        // Use proxy for GET requests
-        const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
-        const response = await fetch(proxyUrl);
-        
-        if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        const text = await response.text();
-        return text ? JSON.parse(text) : {};
-      } else {
-        // For POST, we'll use a different approach since both direct and proxy are failing
-        console.log("📤 Attempting POST request...");
-        
-        // Try with a different CORS proxy
-        const corsProxies = [
-          `https://cors-anywhere.herokuapp.com/${url}`,
-          `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
-          `https://thingproxy.freeboard.io/fetch/${url}`
-        ];
-        
-        for (const proxyUrl of corsProxies) {
-          try {
-            console.log(`🔄 Trying proxy: ${proxyUrl}`);
-            const response = await fetch(proxyUrl, {
-              method: 'POST',
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: options.body
-            });
-            
-            if (response.ok) {
-              const text = await response.text();
-              console.log("✅ POST successful via proxy");
-              return text ? JSON.parse(text) : { success: true };
-            }
-          } catch (proxyError) {
-            console.log(`❌ Proxy failed: ${proxyUrl}`, proxyError);
-            continue;
-          }
-        }
-        
-        // If all proxies fail, throw meaningful error
-        throw new Error('All CORS proxies failed. API server may be unreachable.');
+      console.log(`📡 Making ${options.method || 'GET'} request to:`, url);
+      
+      const response = await fetch(url, {
+        method: options.method || 'GET',
+        mode: 'cors',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          ...options.headers,
+        },
+        body: options.body,
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
+
+      const text = await response.text();
+      const data = text ? JSON.parse(text) : {};
+      
+      console.log(`✅ ${options.method || 'GET'} request successful:`, data);
+      return data;
+
     } catch (error) {
       console.error("🚨 API fetch error:", error);
       throw error;
@@ -139,6 +124,8 @@ const Admin = () => {
         errorMessage = "API serverga ulanish imkoni bo'lmadi. Server ishlamayotgan bo'lishi mumkin.";
       } else if (error.message.includes('Invalid API')) {
         errorMessage = "API dan noto'g'ri formatda ma'lumot qaytdi";
+      } else if (error.message.includes('Failed to fetch')) {
+        errorMessage = "Serverga ulanib bo'lmadi. Internet aloqasini tekshiring.";
       }
       
       toast.error(errorMessage, 5000);
@@ -210,8 +197,7 @@ const Admin = () => {
 
       console.log("📨 POST response:", result);
 
-      // For now, let's assume success if no error was thrown
-      // This is a temporary workaround until we fix the connectivity
+      // Update original products with new values
       setOriginalProducts(prev =>
         prev.map(p => p.card_id === productId ? { ...p, name: product.name, price: product.price } : p)
       );
@@ -222,12 +208,15 @@ const Admin = () => {
         return newSet;
       });
 
-      toast.success(`"${product.name}" muvaffaqiyatli yangilandi! (Lokal saqlandi)`, 3000);
+      toast.success(`"${product.name}" muvaffaqiyatli yangilandi!`, 3000);
 
     } catch (error) {
       console.error("💥 Save product error:", error);
       
-      let errorMessage = "Mahsulotni saqlashda xatolik! Serverga ulanish imkoni bo'lmadi.";
+      let errorMessage = "Mahsulotni saqlashda xatolik!";
+      if (error.message.includes('Failed to fetch')) {
+        errorMessage = "Serverga ulanib bo'lmadi. Internet aloqasini tekshiring.";
+      }
       
       toast.error(errorMessage, 5000);
     } finally {
@@ -268,7 +257,7 @@ const Admin = () => {
 
       console.log("📨 Save all response:", result);
 
-      // For now, assume success
+      // Update all original products
       setOriginalProducts(prev => 
         prev.map(p => {
           const updatedProduct = products.find(mp => mp.card_id === p.card_id);
@@ -284,11 +273,17 @@ const Admin = () => {
       );
 
       setModifiedProducts(new Set());
-      toast.success(`Barcha ${modifiedItems.length} ta mahsulot muvaffaqiyatli yangilandi! (Lokal saqlandi)`, 4000);
+      toast.success(`Barcha ${modifiedItems.length} ta mahsulot muvaffaqiyatli yangilandi!`, 4000);
 
     } catch (error) {
       console.error("💥 Save all products error:", error);
-      toast.error("Mahsulotlarni saqlashda xatolik! Serverga ulanish imkoni bo'lmadi.", 5000);
+      
+      let errorMessage = "Mahsulotlarni saqlashda xatolik!";
+      if (error.message.includes('Failed to fetch')) {
+        errorMessage = "Serverga ulanib bo'lmadi. Internet aloqasini tekshiring.";
+      }
+      
+      toast.error(errorMessage, 5000);
     } finally {
       setSaving(false);
       removeToast(toasts[toasts.length - 1]?.id);

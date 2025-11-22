@@ -9,7 +9,7 @@ import Pagination from './Pagination';
 import ToastContainer from './ToastContainer';
 import useToast from '../hooks/useToast';
 
-const API_BASE_URL = "http://45.94.209.80:8003";
+const API_BASE_URL = "https://tujjors.uz";
 
 const StoreFront = ({ storeId }) => {
    const navigate = useNavigate();
@@ -47,36 +47,27 @@ const StoreFront = ({ storeId }) => {
 
       try {
          const url = `${API_BASE_URL}/${storeId}`;
-         const proxiedUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
+         console.log("Fetching from:", url);
+         const response = await fetch(url);
 
-         // Try fetching via AllOrigins
-         const response = await fetch(proxiedUrl);
-
-         // Validate response
          if (!response.ok) {
-            console.warn("AllOrigins failed, status:", response.status);
-            throw new Error("Proxy failed");
+            throw new Error(`HTTP error! status: ${response.status}`);
          }
 
-         let data;
-         try {
-            data = await response.json();
-         } catch (err) {
-            console.error("JSON parse failed:", err);
-            throw new Error("Invalid JSON");
-         }
+         const data = await response.json();
+         console.log("API Response:", data);
 
          // Validate API structure
          if (!data || !Array.isArray(data.cards)) {
             console.warn("Invalid API structure:", data);
-            throw new Error("Invalid API response");
+            throw new Error("Invalid API response structure");
          }
 
-         // Transform products
+         // Transform products - fix image URLs
          const transformed = data.cards.map(item => ({
-            card_id: item.card_id ?? 0,
-            name: item.name ?? "Nomaʼlum mahsulot",
-            price: item.price ?? 0,
+            card_id: item.card_id || 0,
+            name: item.name || "Nomaʼlum mahsulot",
+            price: item.price || 0,
             image: fixImageUrl(item.image) || "https://via.placeholder.com/300x200",
          }));
 
@@ -93,6 +84,7 @@ const StoreFront = ({ storeId }) => {
 
    const fixImageUrl = (url) => {
       if (!url) return "";
+      // Fix double slashes in URL
       return url.replace(/(https?:\/\/[^\/]+)\/\//, "$1/");
    };
 
@@ -184,15 +176,21 @@ const StoreFront = ({ storeId }) => {
       console.log("POST to:", url, "DATA:", orderData);
 
       try {
-         await fetch(url, {
+         const res = await fetch(url, {
             method: "POST",
             headers: {
-               "Content-Type": "application/json"
+               "Content-Type": "application/json",
             },
             body: JSON.stringify(orderData),
-            mode: "no-cors"
          });
 
+         if (!res.ok) {
+            throw new Error(`HTTP error! status: ${res.status}`);
+         }
+
+         const result = await res.json();
+         console.log("Order response:", result);
+         
          toast.success("✅ Buyurtma muvaffaqiyatli yuborildi!", 4000);
          setCart([]);
          setIsCartOpen(false);
@@ -252,7 +250,6 @@ const StoreFront = ({ storeId }) => {
                         ← Ortga
                      </button>
                   </div>
-
 
                   <SearchBar
                      searchTerm={searchTerm}
