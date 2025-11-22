@@ -143,7 +143,7 @@ const CartPopup = ({ cart, onClose, onConfirmOrder, isSubmitting = false }) => {
                     <img
                       src={item.image}
                       alt={item.name}
-                      className="w-12 h-12 object-cover rounded-lg bg-gray-200 flex-shrink-0"
+                      className="w-12 h-12 object-cover rounded-lg bg-gray-200 shrink-0"
                       onError={(e) => {
                         e.target.src = 'https://placehold.co/60x60/ffffff/1a1a1a/png?text=Rasm';
                       }}
@@ -181,7 +181,7 @@ const CartPopup = ({ cart, onClose, onConfirmOrder, isSubmitting = false }) => {
                 <button
                   onClick={handleSubmit}
                   disabled={isSubmitting || !isFormValid}
-                  className="w-full py-3 px-6 bg-gradient-to-r from-gray-900 to-gray-700 text-white font-bold rounded-xl hover:from-gray-800 hover:to-gray-600 transform hover:-translate-y-1 transition-all duration-300 shadow-lg hover:shadow-xl flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                  className="w-full py-3 px-6 bg-linear-to-r from-gray-900 to-gray-700 text-white font-bold rounded-xl hover:from-gray-800 hover:to-gray-600 transform hover:-translate-y-1 transition-all duration-300 shadow-lg hover:shadow-xl flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
                 >
                   {isSubmitting ? (
                     <>
