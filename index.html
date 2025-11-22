@@ -1,57 +1,14 @@
-<!DOCTYPE html>
-<html lang="uz">
+<!doctype html>
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>TS-TujjorS - Onlayn do'kon</title>
-    <link rel="stylesheet" href="./styles/main.css" />
-    <!-- font awesome -->
-    <link
-      rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css"
-      integrity="sha512-2SwdPD6INVrV/lHTZbO2nodKhrnDdJK9/kg2XD1r9uGqPo1cUbujc+IYdlYdEErWNu69gVcYgdxlmVmzTWnetw=="
-      crossorigin="anonymous"
-      referrerpolicy="no-referrer"
-    />
+    <title>muhammadnur</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css" integrity="sha512-2SwdPD6INVrV/lHTZbO2nodKhrnDdJK9/kg2XD1r9uGqPo1cUbujc+IYdlYdEErWNu69gVcYgdxlmVmzTWnetw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
   </head>
   <body>
-    <header>
-      <div class="header-container">
-        <a href="#" class="logo">TS-<span>TujjorS</span></a>
-        <div class="search-container">
-          <input
-            type="text"
-            class="search-input"
-            placeholder="Mahsulotlarni qidirish..."
-          />
-          <button class="search-btn">Qidirish</button>
-        </div>
-      </div>
-    </header>
-
-    <main>
-      <div class="container">
-        <h1 class="page-title">Mahsulotlar</h1>
-        <div class="products-grid" id="productsContainer">
-          <!-- Products will be loaded here by JavaScript -->
-        </div>
-      </div>
-    </main>
-
-    <!-- Floating Cart Icon -->
-    <div class="floating-cart" id="floatingCart">
-      <div class="cart-icon">
-        <span class="cart-count">0</span>
-        <i class="fa-solid fa-cart-shopping"></i>
-      </div>
-    </div>
-
-    <footer>
-      <div class="footer-container">
-        <p>&copy; 2024 TS-TujjorS. Barcha huquqlar himoyalangan.</p>
-      </div>
-    </footer>
-
-    <script src="./script/main.js"></script>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
