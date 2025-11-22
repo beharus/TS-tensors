@@ -13,8 +13,7 @@ root.render(
       <Routes>
         <Route path="/" element={<App />} /> 
         <Route path="/:id" element={<App />} /> 
-        <Route path="/admin/" element={<Admin />} />
-        <Route path="/admin/:firstId/change/:secondId" element={<Admin />} />
+        <Route path="/:firstId/change/:secondId" element={<Admin />} />
       </Routes>
     </Router>
   </React.StrictMode>
