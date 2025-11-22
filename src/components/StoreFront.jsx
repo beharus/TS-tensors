@@ -141,7 +141,7 @@ const StoreFront = ({ storeId }) => {
       return cart.reduce((total, item) => total + item.quantity, 0);
    };
 
-   const confirmOrder = async () => {
+   const confirmOrder = async (customerInfo) => {
       if (cart.length === 0) {
          toast.warning("Savat bo'sh!", 3000);
          return;
@@ -152,14 +152,32 @@ const StoreFront = ({ storeId }) => {
          return;
       }
 
+      // Validate customer info
+      if (!customerInfo.name || !customerInfo.name.trim()) {
+         toast.error("Iltimos, ismingizni kiriting!", 3000);
+         return;
+      }
+
+      if (!customerInfo.phone || customerInfo.phone.replace(/\D/g, '').length < 9) {
+         toast.error("Iltimos, to'liq telefon raqamingizni kiriting!", 3000);
+         return;
+      }
+
       setIsSubmitting(true);
-      toast.info("Buyurtma yuborilmoqda...", 0); // 0 duration = won't auto-close
+      toast.info("Buyurtma yuborilmoqda...", 0);
+
+      // Clean phone number (remove formatting)
+      const cleanPhone = customerInfo.phone.replace(/\D/g, '');
 
       const orderData = {
          data: cart.map(item => ({
             card_id: item.card_id,
             count: item.quantity,
          })),
+         customer_info: {
+            name: customerInfo.name.trim(),
+            phone: cleanPhone
+         }
       };
 
       const url = `${API_BASE_URL}/${storeId}`;
@@ -184,7 +202,6 @@ const StoreFront = ({ storeId }) => {
          toast.error("❌ Buyurtma yuborilmadi! Internet yoki serverni tekshiring.", 5000);
       } finally {
          setIsSubmitting(false);
-         // Remove the loading toast
          removeToast(toasts[toasts.length - 1]?.id);
       }
    };

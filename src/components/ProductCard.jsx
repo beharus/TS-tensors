@@ -51,7 +51,7 @@ const ProductCard = ({ product, cart, onQuantityChange }) => {
             <div className="flex items-center gap-1 flex-1 justify-between">
               <button
                 onClick={(e) => handleQuantityClick(e, -5)}
-                className="hidden sm:flex w-10 h-10 items-center justify-center bg-linear-to-r from-orange-500 to-yellow-400 text-white rounded-lg hover:from-orange-600 hover:to-yellow-500 transform hover:-translate-y-0.5 transition-all duration-200 font-bold text-sm shadow-md"
+                className=":flex w-10 h-10 items-center justify-center bg-linear-to-r from-orange-500 to-yellow-400 text-white rounded-lg hover:from-orange-600 hover:to-yellow-500 transform hover:-translate-y-0.5 transition-all duration-200 font-bold text-sm shadow-md"
               >
                 -5
               </button>
@@ -72,7 +72,7 @@ const ProductCard = ({ product, cart, onQuantityChange }) => {
               </button>
               <button
                 onClick={(e) => handleQuantityClick(e, 5)}
-                className="hidden sm:flex w-10 h-10 items-center justify-center bg-linear-to-r from-orange-500 to-yellow-400 text-white rounded-lg hover:from-orange-600 hover:to-yellow-500 transform hover:-translate-y-0.5 transition-all duration-200 font-bold text-sm shadow-md"
+                className="flex w-10 h-10 items-center justify-center bg-linear-to-r from-orange-500 to-yellow-400 text-white rounded-lg hover:from-orange-600 hover:to-yellow-500 transform hover:-translate-y-0.5 transition-all duration-200 font-bold text-sm shadow-md"
               >
                 +5
               </button>

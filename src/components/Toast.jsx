@@ -16,7 +16,7 @@ const Toast = ({ message, type = 'info', onClose, duration = 4000 }) => {
    }, [duration, onClose]);
 
    const getStyles = () => {
-      const baseStyles = "fixed top-4 right-4 z-50 max-w-sm w-full transform transition-all duration-300 ease-in-out rounded-2xl shadow-lg p-4 border-2";
+      const baseStyles = "fixed top-4 right-4 z-50 max-w-xs sm:max-w-sm w-full transform transition-all duration-300 ease-in-out rounded-2xl shadow-lg p-4 border-2";
       
       switch (type) {
          case 'success':
