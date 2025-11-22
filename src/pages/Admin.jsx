@@ -5,7 +5,7 @@ import AdminProductCard from '../components/AdminProductCard';
 import ToastContainer from '../components/ToastContainer';
 import useToast from '../hooks/useToast';
 
-const API_BASE_URL = "https://tujjors.uz";
+const API_BASE_URL = "https://tujjors.uz/api";
 
 const Admin = () => {
   const { firstId, secondId } = useParams();

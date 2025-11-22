@@ -47,24 +47,31 @@ const CartPopup = ({ cart, onClose, onConfirmOrder, isSubmitting = false }) => {
     handleInputChange('phone', formattedPhone);
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!customerInfo.name.trim()) {
       alert('Iltimos, ismingizni kiriting!');
       return;
     }
 
     if (!customerInfo.phone.trim() || customerInfo.phone.replace(/\D/g, '').length < 9) {
-      alert('Iltimos, to‘liq telefon raqamingizni kiriting!');
+      alert("Iltimos, to'liq telefon raqamingizni kiriting!");
       return;
     }
 
     // Clean phone number for API (remove formatting)
     const cleanPhone = customerInfo.phone.replace(/\D/g, '');
     
-    onConfirmOrder({
+    // Call the order confirmation function and wait for result
+    const success = await onConfirmOrder({
       ...customerInfo,
       phone: cleanPhone
     });
+
+    // If order was successful, close the popup and reset form
+    if (success) {
+      setCustomerInfo({ name: '', phone: '' });
+      // The popup will be closed by the parent component (StoreFront)
+    }
   };
 
   const isFormValid = customerInfo.name.trim() && customerInfo.phone.replace(/\D/g, '').length >= 9;
@@ -181,7 +188,7 @@ const CartPopup = ({ cart, onClose, onConfirmOrder, isSubmitting = false }) => {
                 <button
                   onClick={handleSubmit}
                   disabled={isSubmitting || !isFormValid}
-                  className="w-full py-3 px-6 bg-linear-to-r from-gray-900 to-gray-700 text-white font-bold rounded-xl hover:from-gray-800 hover:to-gray-600 transform hover:-translate-y-1 transition-all duration-300 shadow-lg hover:shadow-xl flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                  className="w-full py-3 px-6 bg-linear-to-r from-orange-500 to-yellow-400 text-white font-bold rounded-xl hover:from-orange-600 hover:to-yellow-500 transform hover:-translate-y-1 transition-all duration-300 shadow-lg hover:shadow-xl flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
                 >
                   {isSubmitting ? (
                     <>

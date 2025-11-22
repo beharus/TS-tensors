@@ -9,7 +9,7 @@ import Pagination from './Pagination';
 import ToastContainer from './ToastContainer';
 import useToast from '../hooks/useToast';
 
-const API_BASE_URL = "https://tujjors.uz";
+const API_BASE_URL = "https://tujjors.uz/api";
 
 const StoreFront = ({ storeId }) => {
    const navigate = useNavigate();
@@ -133,26 +133,27 @@ const StoreFront = ({ storeId }) => {
       return cart.reduce((total, item) => total + item.quantity, 0);
    };
 
+   // In StoreFront.jsx - update the confirmOrder function
    const confirmOrder = async (customerInfo) => {
       if (cart.length === 0) {
          toast.warning("Savat bo'sh!", 3000);
-         return;
+         return false;
       }
 
       if (!storeId) {
          toast.error("Do'kon ID topilmadi!", 3000);
-         return;
+         return false;
       }
 
       // Validate customer info
       if (!customerInfo.name || !customerInfo.name.trim()) {
          toast.error("Iltimos, ismingizni kiriting!", 3000);
-         return;
+         return false;
       }
 
       if (!customerInfo.phone || customerInfo.phone.replace(/\D/g, '').length < 9) {
          toast.error("Iltimos, to'liq telefon raqamingizni kiriting!", 3000);
-         return;
+         return false;
       }
 
       setIsSubmitting(true);
@@ -166,10 +167,10 @@ const StoreFront = ({ storeId }) => {
             card_id: item.card_id,
             count: item.quantity,
          })),
-         customer_info: {
-            name: customerInfo.name.trim(),
-            phone: cleanPhone
-         }
+         // customer_info: {
+         //    name: customerInfo.name.trim(),
+         //    phone: cleanPhone
+         // }
       };
 
       const url = `${API_BASE_URL}/${storeId}`;
@@ -178,6 +179,7 @@ const StoreFront = ({ storeId }) => {
       try {
          const res = await fetch(url, {
             method: "POST",
+            mode: 'cors',
             headers: {
                "Content-Type": "application/json",
             },
@@ -190,14 +192,17 @@ const StoreFront = ({ storeId }) => {
 
          const result = await res.json();
          console.log("Order response:", result);
-         
+
          toast.success("✅ Buyurtma muvaffaqiyatli yuborildi!", 4000);
          setCart([]);
-         setIsCartOpen(false);
+         setIsCartOpen(false); // This closes the popup
+
+         return true; // Return success
 
       } catch (err) {
          console.error("Order ERROR:", err);
          toast.error("❌ Buyurtma yuborilmadi! Internet yoki serverni tekshiring.", 5000);
+         return false; // Return failure
       } finally {
          setIsSubmitting(false);
          removeToast(toasts[toasts.length - 1]?.id);
