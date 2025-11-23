@@ -167,10 +167,10 @@ const StoreFront = ({ storeId }) => {
             card_id: item.card_id,
             count: item.quantity,
          })),
-         // customer_info: {
-         //    name: customerInfo.name.trim(),
-         //    phone: cleanPhone
-         // }
+         customer_info: {
+            name: customerInfo.name.trim(),
+            phone: cleanPhone
+         }
       };
 
       const url = `${API_BASE_URL}/${storeId}`;
