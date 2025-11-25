@@ -3,11 +3,11 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ProductCard from './ProductCard';
 import CartPopup from './CartPopup';
-import FloatingCart from './FloatingCart';
 import SearchBar from './SearchBar';
 import Pagination from './Pagination';
 import ToastContainer from './ToastContainer';
 import useToast from '../hooks/useToast';
+import jsQR from 'jsqr';
 
 const API_BASE_URL = "https://tujjors.uz/api";
 
@@ -19,16 +19,18 @@ const StoreFront = ({ storeId }) => {
    const [cart, setCart] = useState([]);
    const [loading, setLoading] = useState(false);
    const [searchTerm, setSearchTerm] = useState('');
-   const [barcodeSearch, setBarcodeSearch] = useState('');
    const [currentPage, setCurrentPage] = useState(1);
    const [isCartOpen, setIsCartOpen] = useState(false);
    const [isSubmitting, setIsSubmitting] = useState(false);
    const [selectedCategory, setSelectedCategory] = useState('all');
    const [categories, setCategories] = useState([]);
    const [showScanner, setShowScanner] = useState(false);
+   const [showCategoryMenu, setShowCategoryMenu] = useState(false);
    const [scanning, setScanning] = useState(false);
    const videoRef = useRef(null);
    const streamRef = useRef(null);
+   const canvasRef = useRef(null);
+   const animationFrameRef = useRef(null);
    const itemsPerPage = 8;
 
    useEffect(() => {
@@ -39,7 +41,7 @@ const StoreFront = ({ storeId }) => {
 
    useEffect(() => {
       filterProducts();
-   }, [searchTerm, barcodeSearch, selectedCategory, products]);
+   }, [searchTerm, selectedCategory, products]);
 
    const fetchProducts = async () => {
       if (!storeId) return;
@@ -75,11 +77,11 @@ const StoreFront = ({ storeId }) => {
          }));
 
          setProducts(transformed);
-         
+
          // Extract unique categories
          const uniqueCategories = ['all', ...new Set(transformed.map(p => p.category).filter(Boolean))];
          setCategories(uniqueCategories);
-         
+
          toast.success("Mahsulotlar muvaffaqiyatli yuklandi!", 3000);
       } catch (error) {
          console.error("Error fetching products:", error);
@@ -93,23 +95,17 @@ const StoreFront = ({ storeId }) => {
    const filterProducts = () => {
       let filtered = products;
 
-      // Filter by search term (name)
+      // Filter by search term (name or barcode)
       if (searchTerm) {
          filtered = filtered.filter(product =>
-            product.name.toLowerCase().includes(searchTerm.toLowerCase())
-         );
-      }
-
-      // Filter by barcode
-      if (barcodeSearch) {
-         filtered = filtered.filter(product =>
-            product.barcode && product.barcode.toString().includes(barcodeSearch)
+            product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (product.barcode && product.barcode.toString().includes(searchTerm))
          );
       }
 
       // Filter by category
       if (selectedCategory !== 'all') {
-         filtered = filtered.filter(product => 
+         filtered = filtered.filter(product =>
             product.category === selectedCategory
          );
       }
@@ -169,7 +165,7 @@ const StoreFront = ({ storeId }) => {
       return cart.reduce((total, item) => total + item.quantity, 0);
    };
 
-   // Camera scanning functionality
+   // Barcode scanning functionality
    const startScanner = async () => {
       if (!('navigator' in window && 'mediaDevices' in navigator)) {
          toast.error("Kamera qurilmangizda mavjud emas!", 3000);
@@ -179,17 +175,23 @@ const StoreFront = ({ storeId }) => {
       try {
          setScanning(true);
          setShowScanner(true);
-         
-         const stream = await navigator.mediaDevices.getUserMedia({ 
-            video: { facingMode: 'environment' } 
+
+         const stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: 'environment' }
          });
-         
+
          streamRef.current = stream;
          if (videoRef.current) {
             videoRef.current.srcObject = stream;
+            videoRef.current.setAttribute('playsinline', 'true');
          }
-         
-         toast.info("Kamera ochildi. Skaner ishga tushdi.", 3000);
+
+         // Start scanning after video is loaded
+         videoRef.current.onloadedmetadata = () => {
+            startBarcodeScanning();
+         };
+
+         toast.info("Kamera ochildi. QR/shtrix-kodni skanerlang!", 3000);
       } catch (error) {
          console.error("Camera error:", error);
          toast.error("Kamerani ochib bo'lmadi. Ruxsatni tekshiring!", 5000);
@@ -198,27 +200,76 @@ const StoreFront = ({ storeId }) => {
       }
    };
 
+   const startBarcodeScanning = () => {
+      const scan = () => {
+         if (videoRef.current && videoRef.current.readyState === videoRef.current.HAVE_ENOUGH_DATA) {
+            const video = videoRef.current;
+            const canvas = canvasRef.current;
+            
+            if (!canvas) return;
+
+            const context = canvas.getContext('2d');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            
+            const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+            const code = jsQR(imageData.data, imageData.width, imageData.height, {
+               inversionAttempts: 'dontInvert',
+            });
+
+            if (code) {
+               handleBarcodeDetected(code.data);
+               return; // Stop scanning after successful detection
+            }
+         }
+         
+         // Continue scanning
+         animationFrameRef.current = requestAnimationFrame(scan);
+      };
+
+      animationFrameRef.current = requestAnimationFrame(scan);
+   };
+
    const stopScanner = () => {
+      if (animationFrameRef.current) {
+         cancelAnimationFrame(animationFrameRef.current);
+         animationFrameRef.current = null;
+      }
+      
       if (streamRef.current) {
          streamRef.current.getTracks().forEach(track => track.stop());
          streamRef.current = null;
       }
+      
       setShowScanner(false);
       setScanning(false);
    };
 
    const handleBarcodeDetected = (barcode) => {
-      setBarcodeSearch(barcode);
-      setShowScanner(false);
-      stopScanner();
-      toast.success(`Skaner qidiruvi: ${barcode}`, 3000);
-   };
-
-   // Manual barcode input simulation (in real app, use a barcode scanner library)
-   const simulateBarcodeScan = () => {
-      const sampleBarcodes = ['4607002050468', '1234567890', '9876543210'];
-      const randomBarcode = sampleBarcodes[Math.floor(Math.random() * sampleBarcodes.length)];
-      handleBarcodeDetected(randomBarcode);
+      console.log("Barcode detected:", barcode);
+      
+      // Validate barcode format (numeric, 8-13 digits typical for product barcodes)
+      const cleanBarcode = barcode.trim();
+      
+      if (cleanBarcode.length >= 8 && cleanBarcode.length <= 13 && /^\d+$/.test(cleanBarcode)) {
+         setSearchTerm(cleanBarcode);
+         setShowScanner(false);
+         stopScanner();
+         toast.success(`Shtrix-kod topildi: ${cleanBarcode}`, 3000);
+         
+         // Auto-search for products with this barcode
+         const matchingProducts = products.filter(product => 
+            product.barcode && product.barcode.toString() === cleanBarcode
+         );
+         
+         if (matchingProducts.length === 0) {
+            toast.info(`Ushbu shtrix-kod bilan mahsulot topilmadi: ${cleanBarcode}`, 4000);
+         }
+      } else {
+         toast.warning(`Noto'g'ri shtrix-kod formati: ${cleanBarcode}`, 3000);
+      }
    };
 
    const confirmOrder = async (customerInfo) => {
@@ -282,14 +333,14 @@ const StoreFront = ({ storeId }) => {
 
          toast.success("✅ Buyurtma muvaffaqiyatli yuborildi!", 4000);
          setCart([]);
-         setIsCartOpen(false); // This closes the popup
+         setIsCartOpen(false);
 
-         return true; // Return success
+         return true;
 
       } catch (err) {
          console.error("Order ERROR:", err);
          toast.error("❌ Buyurtma yuborilmadi! Internet yoki serverni tekshiring.", 5000);
-         return false; // Return failure
+         return false;
       } finally {
          setIsSubmitting(false);
          removeToast(toasts[toasts.length - 1]?.id);
@@ -319,7 +370,6 @@ const StoreFront = ({ storeId }) => {
 
    const clearFilters = () => {
       setSearchTerm('');
-      setBarcodeSearch('');
       setSelectedCategory('all');
    };
 
@@ -339,20 +389,74 @@ const StoreFront = ({ storeId }) => {
 
          {/* Header */}
          <header className="bg-linear-to-r from-yellow-500 to-orange-400 shadow-lg sticky top-0 z-40">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-               <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-                  <div className="flex items-center justify-between lg:block">
+            <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2 sm:py-4">
+               <div className="flex items-center justify-between">
+                  {/* Mobile: Burger Menu + Logo */}
+                  <div className="flex items-center gap-2 lg:hidden">
+                     <button
+                        onClick={() => setShowCategoryMenu(true)}
+                        className="p-2 text-white hover:text-gray-200 transition-colors"
+                     >
+                        <i className="fa-solid fa-bars text-lg"></i>
+                     </button>
+                     <a href="/" className="text-xl font-bold text-white">
+                        TujjorS
+                     </a>
+                  </div>
+
+                  {/* Desktop: Logo */}
+                  <div className="hidden lg:block">
                      <a href="/" className="text-2xl font-bold text-gray-900">
                         <span className="text-white">Tujjor</span>S
                      </a>
+                  </div>
+
+                  {/* Search Bar - Hidden on mobile, show on sm and up */}
+                  <div className="hidden sm:flex items-center gap-3 flex-1 lg:max-w-2xl mx-4">
                      <button
-                        onClick={() => navigate('/')}
-                        className="lg:hidden text-white text-sm hover:text-gray-200 transition-colors"
+                        onClick={() => setShowCategoryMenu(true)}
+                        className="hidden lg:flex items-center gap-2 px-4 py-3 bg-white text-gray-700 rounded-xl hover:bg-gray-50 transition-colors border border-gray-200"
                      >
-                        ← Ortga
+                        <i className="fa-solid fa-bars"></i>
+                        <span>Kategoriyalar</span>
+                     </button>
+
+                     <SearchBar
+                        searchTerm={searchTerm}
+                        onSearchChange={setSearchTerm}
+                     />
+
+                     <button
+                        onClick={() => setIsCartOpen(true)}
+                        className="px-5 cursor-pointer text-white py-3.5 bg-linear-to-r from-orange-500 to-yellow-400 font-bold rounded-xl hover:from-orange-600 hover:to-yellow-500 transform hover:-translate-y-0.5 transition-all duration-300 shadow-lg hover:shadow-xl"
+                     >
+                        <i className="fa-solid fa-cart-shopping"></i>
+                        {getCartCount() > 0 && (
+                           <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center border border-white">
+                              {getCartCount()}
+                           </span>
+                        )}
                      </button>
                   </div>
 
+                  {/* Mobile: Cart Button */}
+                  <div className="flex items-center gap-2 lg:hidden">
+                     <button
+                        onClick={() => setIsCartOpen(true)}
+                        className="relative p-2 hover:text-gray-200 px-5 cursor-pointer text-white py-3.5 bg-linear-to-r from-orange-500 to-yellow-400 font-bold rounded-xl hover:from-orange-600 hover:to-yellow-500 transform hover:-translate-y-0.5 transition-all duration-300 shadow-lg hover:shadow-xl"
+                     >
+                        <i className="fa-solid fa-cart-shopping text-lg"></i>
+                        {getCartCount() > 0 && (
+                           <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-4 h-4 flex items-center justify-center border border-white">
+                              {getCartCount()}
+                           </span>
+                        )}
+                     </button>
+                  </div>
+               </div>
+
+               {/* Mobile Search Bar - Show below on mobile */}
+               <div className="sm:hidden mt-3">
                   <SearchBar
                      searchTerm={searchTerm}
                      onSearchChange={setSearchTerm}
@@ -361,79 +465,90 @@ const StoreFront = ({ storeId }) => {
             </div>
          </header>
 
-         {/* Search Filters Section */}
-         <div className="bg-white border-b border-gray-200">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-               <div className="flex flex-col lg:flex-row gap-4">
-                  
-                  {/* Category Filter */}
-                  <div className="flex-1">
-                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Kategoriya
-                     </label>
-                     <select
-                        value={selectedCategory}
-                        onChange={(e) => setSelectedCategory(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                     >
-                        {categories.map(category => (
-                           <option key={category} value={category}>
-                              {category === 'all' ? 'Barcha kategoriyalar' : category}
-                           </option>
-                        ))}
-                     </select>
-                  </div>
-
-                  {/* Barcode Search */}
-                  <div className="flex-1">
-                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Shtrix-kod qidirish
-                     </label>
-                     <div className="flex gap-2">
-                        <input
-                           type="text"
-                           value={barcodeSearch}
-                           onChange={(e) => setBarcodeSearch(e.target.value)}
-                           placeholder="Shtrix-kodni kiriting"
-                           className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                        />
+         {/* Category Menu Popup */}
+         {showCategoryMenu && (
+            <div className="fixed inset-0 z-50">
+               <div
+                  className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+                  onClick={() => setShowCategoryMenu(false)}
+               />
+               <div className="absolute left-0 top-0 h-full w-80 max-w-full bg-white shadow-2xl transform transition-transform duration-300">
+                  <div className="flex flex-col h-full">
+                     <div className="flex items-center justify-between p-4 border-b border-gray-200">
+                        <h2 className="text-xl font-bold text-gray-900">Kategoriyalar</h2>
                         <button
-                           onClick={startScanner}
-                           className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+                           onClick={() => setShowCategoryMenu(false)}
+                           className="p-2 text-gray-500 hover:text-gray-700 transition-colors"
                         >
-                           <i className="fa-solid fa-camera"></i>
-                           Skaner
+                           <i className="fa-solid fa-times text-xl"></i>
+                        </button>
+                     </div>
+                     <div className="flex-1 overflow-y-auto p-4">
+                        <div className="space-y-2">
+                           <button
+                              onClick={() => {
+                                 setSelectedCategory('all');
+                                 setShowCategoryMenu(false);
+                              }}
+                              className={`w-full text-left px-4 py-3 rounded-xl transition-all duration-200 ${selectedCategory === 'all'
+                                 ? 'bg-orange-500 text-white shadow-lg'
+                                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200 hover:shadow-md'
+                                 }`}
+                           >
+                              <div className="flex items-center gap-3">
+                                 <i className="fa-solid fa-grid text-lg"></i>
+                                 <span className="font-medium">Barcha mahsulotlar</span>
+                              </div>
+                           </button>
+                           {categories.filter(cat => cat !== 'all').map(category => (
+                              <button
+                                 key={category}
+                                 onClick={() => {
+                                    setSelectedCategory(category);
+                                    setShowCategoryMenu(false);
+                                 }}
+                                 className={`w-full text-left px-4 py-3 rounded-xl transition-all duration-200 ${selectedCategory === category
+                                    ? 'bg-orange-500 text-white shadow-lg'
+                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200 hover:shadow-md'
+                                    }`}
+                              >
+                                 <div className="flex items-center gap-3">
+                                    <i className="fa-solid fa-folder text-lg"></i>
+                                    <span className="font-medium">{category}</span>
+                                 </div>
+                              </button>
+                           ))}
+                        </div>
+                     </div>
+                     <div className="p-4 border-t border-gray-200">
+                        <button
+                           onClick={() => {
+                              setSelectedCategory('all');
+                              setShowCategoryMenu(false);
+                           }}
+                           className="w-full px-4 py-3 bg-gray-900 text-white rounded-xl hover:bg-gray-800 transition-colors font-medium"
+                        >
+                           Barchasini ko'rish
                         </button>
                      </div>
                   </div>
-
-                  {/* Clear Filters */}
-                  <div className="flex items-end">
-                     <button
-                        onClick={clearFilters}
-                        className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors flex items-center gap-2"
-                     >
-                        <i className="fa-solid fa-times"></i>
-                        Tozalash
-                     </button>
-                  </div>
                </div>
+            </div>
+         )}
 
-               {/* Active Filters Info */}
-               {(searchTerm || barcodeSearch || selectedCategory !== 'all') && (
-                  <div className="mt-3 flex flex-wrap gap-2">
+         {/* Active Filters Info */}
+         {(searchTerm || selectedCategory !== 'all') && (
+            <div className="bg-white border-b border-gray-200">
+               <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2 sm:py-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                     <span className="text-sm text-gray-600">Faol filtrlari:</span>
                      {searchTerm && (
                         <span className="inline-flex items-center px-2 py-1 bg-orange-100 text-orange-800 text-sm rounded-full">
-                           Nomi: {searchTerm}
-                           <button onClick={() => setSearchTerm('')} className="ml-1 text-orange-600 hover:text-orange-800">
-                              ×
-                           </button>
-                        </span>
-                     )}
-                     {barcodeSearch && (
-                        <span className="inline-flex items-center px-2 py-1 bg-blue-100 text-blue-800 text-sm rounded-full">
-                           Shtrix-kod: {barcodeSearch}
-                           <button onClick={() => setBarcodeSearch('')} className="ml-1 text-blue-600 hover:text-blue-800">
+                           Qidiruv: {searchTerm}
+                           <button
+                              onClick={() => setSearchTerm('')}
+                              className="ml-1 text-orange-600 hover:text-orange-800"
+                           >
                               ×
                            </button>
                         </span>
@@ -441,22 +556,33 @@ const StoreFront = ({ storeId }) => {
                      {selectedCategory !== 'all' && (
                         <span className="inline-flex items-center px-2 py-1 bg-green-100 text-green-800 text-sm rounded-full">
                            Kategoriya: {selectedCategory}
-                           <button onClick={() => setSelectedCategory('all')} className="ml-1 text-green-600 hover:text-green-800">
+                           <button
+                              onClick={() => setSelectedCategory('all')}
+                              className="ml-1 text-green-600 hover:text-green-800"
+                           >
                               ×
                            </button>
                         </span>
                      )}
+                     {(searchTerm || selectedCategory !== 'all') && (
+                        <button
+                           onClick={clearFilters}
+                           className="px-2 py-1 bg-gray-100 text-gray-700 text-sm rounded-lg hover:bg-gray-200 transition-colors"
+                        >
+                           Tozalash
+                        </button>
+                     )}
                   </div>
-               )}
+               </div>
             </div>
-         </div>
+         )}
 
          {/* Barcode Scanner Modal */}
          {showScanner && (
-            <div className="fixed inset-0 bg-black/75 bg-opacity-75 flex items-center justify-center z-50">
+            <div className="fixed inset-0 bg-black/75 flex items-center justify-center z-50">
                <div className="bg-white rounded-2xl p-6 max-w-md w-full mx-4">
                   <div className="flex justify-between items-center mb-4">
-                     <h3 className="text-lg font-semibold">Shtrix-kod skaneri</h3>
+                     <h3 className="text-lg font-semibold">QR/Shtrix-kod Skaneri</h3>
                      <button
                         onClick={stopScanner}
                         className="text-gray-500 hover:text-gray-700"
@@ -464,31 +590,31 @@ const StoreFront = ({ storeId }) => {
                         <i className="fa-solid fa-times text-xl"></i>
                      </button>
                   </div>
-                  
-                  <div className="bg-black/50 rounded-lg overflow-hidden mb-4">
+
+                  <div className="bg-black rounded-lg overflow-hidden mb-4 relative">
                      <video
                         ref={videoRef}
                         autoPlay
                         playsInline
+                        muted
                         className="w-full h-64 object-cover"
                      />
+                     {/* Scanner overlay */}
+                     <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="w-64 h-32 border-2 border-green-400 rounded-lg shadow-lg"></div>
+                     </div>
+                     <canvas ref={canvasRef} className="hidden" />
                   </div>
-                  
+
                   <div className="text-center text-gray-600 mb-4">
                      {scanning ? (
-                        <p>Kamera qurilmaga qaratiling va shtrix-kodni skanerlang</p>
+                        <p>QR yoki shtrix-kodni ramkaga qaratib turishing</p>
                      ) : (
                         <p>Kamera yuklanmoqda...</p>
                      )}
                   </div>
-                  
+
                   <div className="flex gap-2">
-                     <button
-                        onClick={simulateBarcodeScan}
-                        className="flex-1 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
-                     >
-                        Test skanerlash
-                     </button>
                      <button
                         onClick={stopScanner}
                         className="flex-1 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
@@ -502,7 +628,6 @@ const StoreFront = ({ storeId }) => {
 
          {/* Main Content */}
          <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8">
-            {/* Results Info */}
             <div className="mb-6 flex justify-between items-center">
                <div>
                   <h2 className="text-2xl font-bold text-gray-900">
@@ -524,12 +649,12 @@ const StoreFront = ({ storeId }) => {
                         Hech qanday mahsulot topilmadi
                      </h3>
                      <p className="text-gray-600 mb-4">
-                        {searchTerm || barcodeSearch || selectedCategory !== 'all' 
-                           ? "Qidiruv shartlari bo'yicha mahsulot topilmadi" 
+                        {searchTerm || selectedCategory !== 'all'
+                           ? "Qidiruv shartlari bo'yicha mahsulot topilmadi"
                            : "Ushbu do'konda hozircha mahsulotlar mavjud emas"
                         }
                      </p>
-                     {(searchTerm || barcodeSearch || selectedCategory !== 'all') && (
+                     {(searchTerm || selectedCategory !== 'all') && (
                         <button
                            onClick={clearFilters}
                            className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
@@ -561,11 +686,15 @@ const StoreFront = ({ storeId }) => {
             )}
          </main>
 
-         {/* Floating Cart */}
-         <FloatingCart
-            cartCount={getCartCount()}
-            onCartClick={() => setIsCartOpen(true)}
-         />
+         {/* Floating Scanner Button - Mobile Only */}
+         <div className="lg:hidden fixed bottom-8 left-1/2 transform -translate-x-1/2 z-40">
+            <button
+               onClick={startScanner}
+               className="w-16 h-16 bg-orange-600 rounded-2xl flex items-center justify-center cursor-pointer shadow-2xl hover:shadow-3xl transform hover:scale-110 transition-all duration-300 border-2 border-white"
+            >
+               <i className="fa-solid fa-qrcode text-3xl text-white"></i>
+            </button>
+         </div>
 
          {/* Cart Popup */}
          {isCartOpen && (
