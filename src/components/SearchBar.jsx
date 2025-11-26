@@ -1,14 +1,25 @@
 // components/SearchBar.jsx
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 
 const SearchBar = ({ searchTerm, onSearchChange }) => {
+  const inputRef = useRef(null);
+
+  // Auto-focus when search term changes (like when barcode is scanned)
+  useEffect(() => {
+    if (searchTerm && inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [searchTerm]);
+
   const handleSubmit = (e) => {
     e.preventDefault();
+    // Optional: Add any search submission logic here
   };
 
   return (
     <form onSubmit={handleSubmit} className="flex gap-2 w-full">
       <input
+        ref={inputRef}
         type="text"
         value={searchTerm}
         onChange={(e) => onSearchChange(e.target.value)}

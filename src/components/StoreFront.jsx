@@ -166,7 +166,7 @@ const StoreFront = ({ storeId }) => {
          toast.error("Kamera qurilmangizda mavjud emas!", 3000);
          return;
       }
-      
+
       setShowScanner(true);
       toast.info("Kamera ochildi. QR/shtrix-kodni skanerlang!", 3000);
    };
@@ -177,20 +177,33 @@ const StoreFront = ({ storeId }) => {
 
    const handleBarcodeDetected = (barcode) => {
       console.log("Barcode detected:", barcode);
-      
-      // Validate barcode format (numeric, 8-13 digits typical for product barcodes)
+
+      // Validate barcode format
       const cleanBarcode = barcode.trim();
-      
+
       if (cleanBarcode.length >= 8 && cleanBarcode.length <= 13 && /^\d+$/.test(cleanBarcode)) {
+         // Close scanner modal
+         setShowScanner(false);
+
+         // Set search term
          setSearchTerm(cleanBarcode);
-         toast.success(`Shtrix-kod topildi: ${cleanBarcode}`, 3000);
-         
-         // Auto-search for products with this barcode
-         const matchingProducts = products.filter(product => 
+
+         // Find matching products
+         const matchingProducts = products.filter(product =>
             product.barcode && product.barcode.toString() === cleanBarcode
          );
-         
-         if (matchingProducts.length === 0) {
+
+         if (matchingProducts.length > 0) {
+            const product = matchingProducts[0];
+
+            // OPTION 1: Auto-add to cart
+            updateCartQuantity(product.card_id, 1);
+            toast.success(`"${product.name}" savatga qo'shildi!`, 3000);
+
+            // OPTION 2: Just show in search (comment out the above line if you prefer this)
+            // toast.success(`Mahsulot topildi: ${product.name}`, 3000);
+
+         } else {
             toast.info(`Ushbu shtrix-kod bilan mahsulot topilmadi: ${cleanBarcode}`, 4000);
          }
       } else {
@@ -396,7 +409,7 @@ const StoreFront = ({ storeId }) => {
                      >
                         <i className="fa-solid fa-qrcode text-lg"></i>
                      </button>
-                     
+
                      <button
                         onClick={() => setIsCartOpen(true)}
                         className="relative p-2 hover:text-gray-200 px-5 cursor-pointer text-white py-3.5 bg-linear-to-r from-orange-500 to-yellow-400 font-bold rounded-xl hover:from-orange-600 hover:to-yellow-500 transform hover:-translate-y-0.5 transition-all duration-300 shadow-lg hover:shadow-xl"
