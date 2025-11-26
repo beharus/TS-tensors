@@ -169,7 +169,7 @@ const BarcodeScanner = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black/20 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl max-w-md w-full overflow-hidden shadow-2xl">
         {/* Header */}
         <div className="flex justify-between items-center p-4 border-b border-gray-200 bg-white">
@@ -185,7 +185,7 @@ const BarcodeScanner = ({
           </button>
         </div>
 
-        {/* Scanner View */}
+        {/* Scanner View - REMOVED BLUR AND BACKGROUND */}
         <div className="relative bg-black aspect-video">
           <video
             ref={videoRef}
@@ -195,11 +195,11 @@ const BarcodeScanner = ({
             autoPlay
           />
           
-          {/* Scanning Overlay */}
+          {/* Scanning Overlay - TRANSPARENT FRAME ONLY */}
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
             <div className="relative w-64 h-40">
-              {/* Scanning Frame */}
-              <div className="w-full h-full border-2 border-green-400 rounded-xl shadow-lg bg-black/20 backdrop-blur-sm"></div>
+              {/* Scanning Frame - TRANSPARENT, NO BLUR */}
+              <div className="w-full h-full border-2 border-green-400 rounded-xl"></div>
               
               {/* Animated Scanning Line */}
               <div className="absolute left-2 right-2 top-0 h-1 bg-green-400 rounded-full shadow-[0_0_12px_rgba(74,222,128,0.9)] animate-scan-line"></div>
@@ -209,9 +209,6 @@ const BarcodeScanner = ({
               <div className="absolute -top-1 -right-1 w-5 h-5 border-t-2 border-r-2 border-green-400 rounded-tr-lg"></div>
               <div className="absolute -bottom-1 -left-1 w-5 h-5 border-b-2 border-l-2 border-green-400 rounded-bl-lg"></div>
               <div className="absolute -bottom-1 -right-1 w-5 h-5 border-b-2 border-r-2 border-green-400 rounded-br-lg"></div>
-
-              {/* Scanning Glow Effect */}
-              <div className="absolute inset-0 border-2 border-green-300 rounded-xl opacity-30 animate-pulse"></div>
             </div>
           </div>
 
