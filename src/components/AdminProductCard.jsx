@@ -120,8 +120,35 @@ const AdminProductCard = ({ product, isModified, onUpdate, onSave, isSaving }) =
       return new Intl.NumberFormat("uz-UZ").format(price) + " so'm";
    };
 
+   // Function to generate a consistent color based on product ID
+   const getProductColor = (productId) => {
+      const colors = [
+         'bg-gradient-to-br from-blue-100 to-blue-200',
+         'bg-gradient-to-br from-green-100 to-green-200',
+         'bg-gradient-to-br from-purple-100 to-purple-200',
+         'bg-gradient-to-br from-pink-100 to-pink-200',
+         'bg-gradient-to-br from-yellow-100 to-yellow-200',
+         'bg-gradient-to-br from-indigo-100 to-indigo-200',
+         'bg-gradient-to-br from-red-100 to-red-200',
+         'bg-gradient-to-br from-teal-100 to-teal-200'
+      ];
+      
+      // Convert productId to string and handle different data types
+      const idString = String(productId || 'default');
+      
+      // Simple hash function to get consistent color for same product
+      const hash = idString.split('').reduce((a, b) => {
+         a = ((a << 5) - a) + b.charCodeAt(0);
+         return a & a;
+      }, 0);
+      
+      return colors[Math.abs(hash) % colors.length];
+   };
+
    const handleImageError = (e) => {
       e.target.src = 'https://via.placeholder.com/300x200/ffffff/1a1a1a/png?text=Rasm+Yuklanmadi';
+      // Switch to object-cover for placeholder to fill the container
+      e.target.className = "w-full h-full object-cover";
    };
 
    const isNameModified = localName !== product.originalName;
@@ -138,12 +165,12 @@ const AdminProductCard = ({ product, isModified, onUpdate, onSave, isSaving }) =
             </div>
          )}
 
-         {/* Product Image */}
-         <div className="h-40 bg-gray-100 overflow-hidden sm:h-48">
+         {/* Product Image Container with Colored Background */}
+         <div className={`h-40 overflow-hidden ${getProductColor(product.card_id)} flex items-center justify-center sm:h-48`}>
             <img
                src={product.image}
                alt={product.name}
-               className="w-full h-full object-contain p-3 transition-transform duration-300 hover:scale-105 sm:p-4"
+               className="w-full h-full object-contain p-4 transition-transform duration-300 hover:scale-105"
                onError={handleImageError}
             />
          </div>

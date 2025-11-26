@@ -9,8 +9,35 @@ const ProductCard = ({ product, cart, onQuantityChange }) => {
     return new Intl.NumberFormat("uz-UZ").format(price) + " so'm";
   };
 
+  // Function to generate a consistent color based on product ID
+  const getProductColor = (productId) => {
+    const colors = [
+      'bg-gradient-to-br from-blue-100 to-blue-200',
+      'bg-gradient-to-br from-green-100 to-green-200',
+      'bg-gradient-to-br from-purple-100 to-purple-200',
+      'bg-gradient-to-br from-pink-100 to-pink-200',
+      'bg-gradient-to-br from-yellow-100 to-yellow-200',
+      'bg-gradient-to-br from-indigo-100 to-indigo-200',
+      'bg-gradient-to-br from-red-100 to-red-200',
+      'bg-gradient-to-br from-teal-100 to-teal-200'
+    ];
+    
+    // Convert productId to string and handle different data types
+    const idString = String(productId || 'default');
+    
+    // Simple hash function to get consistent color for same product
+    const hash = idString.split('').reduce((a, b) => {
+      a = ((a << 5) - a) + b.charCodeAt(0);
+      return a & a;
+    }, 0);
+    
+    return colors[Math.abs(hash) % colors.length];
+  };
+
   const handleImageError = (e) => {
     e.target.src = 'https://placehold.co/300x200/ffffff/1a1a1a/png?text=Rasm+Yuklanmadi';
+    // Switch to object-cover for placeholder to fill the container
+    e.target.className = "w-full h-full object-cover";
   };
 
   // Prevent double clicks by using proper event handling
@@ -28,11 +55,12 @@ const ProductCard = ({ product, cart, onQuantityChange }) => {
 
   return (
     <div className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 hover:-translate-y-2 cursor-pointer">
-      <div className="h-48 overflow-hidden bg-gray-100">
+      {/* Product Image Container with Colored Background */}
+      <div className={`h-48 overflow-hidden ${getProductColor(product.card_id)} flex items-center justify-center`}>
         <img
           src={product.image}
           alt={product.name}
-          className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+          className="w-full h-full object-contain p-4 hover:scale-105 transition-transform duration-300"
           onError={handleImageError}
         />
       </div>
@@ -51,7 +79,7 @@ const ProductCard = ({ product, cart, onQuantityChange }) => {
             <div className="flex items-center gap-1 flex-1 justify-between">
               <button
                 onClick={(e) => handleQuantityClick(e, -5)}
-                className=":flex w-10 h-10 items-center justify-center bg-linear-to-r from-orange-500 to-yellow-400 text-white rounded-lg hover:from-orange-600 hover:to-yellow-500 transform hover:-translate-y-0.5 transition-all duration-200 font-bold text-sm shadow-md"
+                className="flex w-10 h-10 items-center justify-center bg-linear-to-r from-orange-500 to-yellow-400 text-white rounded-lg hover:from-orange-600 hover:to-yellow-500 transform hover:-translate-y-0.5 transition-all duration-200 font-bold text-sm shadow-md"
               >
                 -5
               </button>
