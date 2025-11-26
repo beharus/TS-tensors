@@ -2,11 +2,11 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { BrowserMultiFormatReader } from '@zxing/library';
 
-const BarcodeScanner = ({ 
-  isOpen, 
-  onClose, 
+const BarcodeScanner = ({
+  isOpen,
+  onClose,
   onBarcodeDetected,
-  onError 
+  onError
 }) => {
   const videoRef = useRef(null);
   const codeReader = useRef(new BrowserMultiFormatReader());
@@ -28,86 +28,43 @@ const BarcodeScanner = ({
   }, [isOpen]);
 
   const startScanner = async () => {
-    if (!isOpen) return;
-
     try {
       setCameraError(null);
       setIsScanning(true);
-      setHasPermission(false);
 
-      console.log('🔄 Starting camera...');
+      // List devices
+      const devices = await codeReader.current.listVideoInputDevices();
 
-      // 🔥 STEP 1: Force camera permission FIRST - this triggers the browser popup
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { 
-          facingMode: 'environment', // Prefer back camera
-          width: { ideal: 1280 },
-          height: { ideal: 720 }
-        }
-      });
-
-      streamRef.current = stream;
-      setHasPermission(true);
-
-      // 🔥 STEP 2: Set up video element
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        videoRef.current.setAttribute('playsinline', 'true'); // iOS fix
-        videoRef.current.setAttribute('autoplay', 'true');
-        videoRef.current.setAttribute('muted', 'true');
-        
-        // Wait for video to be ready
-        await new Promise((resolve) => {
-          if (videoRef.current.readyState >= 4) {
-            resolve();
-          } else {
-            videoRef.current.onloadedmetadata = resolve;
-          }
-        });
-
-        await videoRef.current.play();
+      if (devices.length === 0) {
+        throw new Error('No camera found');
       }
 
-      console.log('✅ Camera started successfully');
+      // Select back camera if exists
+      const backCam = devices.find(d =>
+        d.label.toLowerCase().includes('back') ||
+        d.label.toLowerCase().includes('environment')
+      );
+      const selectedDevice = backCam ? backCam.deviceId : devices[0].deviceId;
 
-      // 🔥 STEP 3: Start ZXing decoding from the ACTIVE video stream
-      codeReader.current.decodeFromVideoElement(
+      // ❗ Use this method — MOST STABLE
+      codeReader.current.decodeFromVideoDevice(
+        selectedDevice,
         videoRef.current,
-        (result, error) => {
+        (result, err) => {
           if (result) {
-            console.log('🎉 Barcode detected:', result.getText());
+            console.log('Barcode:', result.getText());
             handleSuccessfulScan(result.getText());
-          }
-          
-          if (error) {
-            // Ignore "NotFoundException" - it's just "no barcode found yet"
-            if (!error.message?.includes('NotFoundException')) {
-              console.warn('Scanning error:', error);
-            }
           }
         }
       );
 
     } catch (error) {
-      console.error('❌ Camera initialization failed:', error);
-      
-      // Handle specific error types
-      if (error.name === 'NotAllowedError') {
-        setCameraError('Kameraga ruxsat bermadingiz. Iltimos, brauzer sozlamalaridan ruxsat bering.');
-      } else if (error.name === 'NotFoundError') {
-        setCameraError('Kamera topilmadi. Qurilmangizda kamera mavjud emas.');
-      } else if (error.name === 'NotSupportedError') {
-        setCameraError('Brauzeringiz kamerani qoʻllab-quvvatlamaydi.');
-      } else if (error.name === 'NotReadableError') {
-        setCameraError('Kamera band yoki ishlamayapti. Boshqa dastur kameredan foydalanayotgan boʻlishi mumkin.');
-      } else {
-        setCameraError('Kamerani ishga tushirib boʻlmadi. Iltimos, qayta urinib koʻring.');
-      }
-      
+      console.error(error);
+      setCameraError('Kamerani ishga tushirib bo‘lmadi');
       onError?.(error);
-      setIsScanning(false);
     }
   };
+
 
   const handleSuccessfulScan = (barcode) => {
     console.log('✅ Scan successful, stopping scanner...');
@@ -117,11 +74,11 @@ const BarcodeScanner = ({
 
   const stopScanner = () => {
     console.log('🛑 Stopping scanner...');
-    
+
     try {
       // Stop ZXing decoding
       codeReader.current.reset();
-      
+
       // Stop all video tracks
       if (streamRef.current) {
         streamRef.current.getTracks().forEach(track => {
@@ -129,16 +86,16 @@ const BarcodeScanner = ({
         });
         streamRef.current = null;
       }
-      
+
       // Clear video source
       if (videoRef.current) {
         videoRef.current.srcObject = null;
       }
-      
+
       setIsScanning(false);
       setHasPermission(false);
       setCameraError(null);
-      
+
     } catch (error) {
       console.warn('Error stopping scanner:', error);
     }
@@ -154,15 +111,15 @@ const BarcodeScanner = ({
 
   const getErrorMessage = () => {
     if (cameraError) return cameraError;
-    
+
     if (!hasPermission && !cameraError) {
       return 'Kamera ruxsati soʻralmoqda...';
     }
-    
+
     if (isScanning && hasPermission) {
       return 'QR yoki shtrix-kodni ramkaga qaratib turing';
     }
-    
+
     return 'Kamera tayyorlanmoqda...';
   };
 
@@ -189,21 +146,21 @@ const BarcodeScanner = ({
         <div className="relative bg-black aspect-video">
           <video
             ref={videoRef}
-            className="w-full h-full object-cover"
+            className="w-full z-1 h-full object-cover"
             muted
             playsInline
             autoPlay
           />
-          
+
           {/* Scanning Overlay - TRANSPARENT FRAME ONLY */}
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
             <div className="relative w-64 h-40">
               {/* Scanning Frame - TRANSPARENT, NO BLUR */}
               <div className="w-full h-full border-2 border-green-400 rounded-xl"></div>
-              
+
               {/* Animated Scanning Line */}
               <div className="absolute left-2 right-2 top-0 h-1 bg-green-400 rounded-full shadow-[0_0_12px_rgba(74,222,128,0.9)] animate-scan-line"></div>
-              
+
               {/* Corner Indicators */}
               <div className="absolute -top-1 -left-1 w-5 h-5 border-t-2 border-l-2 border-green-400 rounded-tl-lg"></div>
               <div className="absolute -top-1 -right-1 w-5 h-5 border-t-2 border-r-2 border-green-400 rounded-tr-lg"></div>
@@ -258,14 +215,13 @@ const BarcodeScanner = ({
               </div>
             )}
           </div>
-          
-          <p className={`font-medium ${
-            cameraError ? 'text-red-600' : 
-            isScanning && hasPermission ? 'text-gray-700' : 'text-gray-500'
-          }`}>
+
+          <p className={`font-medium ${cameraError ? 'text-red-600' :
+              isScanning && hasPermission ? 'text-gray-700' : 'text-gray-500'
+            }`}>
             {getErrorMessage()}
           </p>
-          
+
           {isScanning && hasPermission && !cameraError && (
             <p className="text-sm text-gray-500 mt-1">
               Kod avtomatik ravishda skanerlanadi
