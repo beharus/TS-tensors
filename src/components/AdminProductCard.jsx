@@ -123,14 +123,7 @@ const AdminProductCard = ({ product, isModified, onUpdate, onSave, isSaving }) =
    // Function to generate a consistent color based on product ID
    const getProductColor = (productId) => {
       const colors = [
-         'bg-gradient-to-br from-blue-100 to-blue-200',
-         'bg-gradient-to-br from-green-100 to-green-200',
-         'bg-gradient-to-br from-purple-100 to-purple-200',
-         'bg-gradient-to-br from-pink-100 to-pink-200',
-         'bg-gradient-to-br from-yellow-100 to-yellow-200',
-         'bg-gradient-to-br from-indigo-100 to-indigo-200',
-         'bg-gradient-to-br from-red-100 to-red-200',
-         'bg-gradient-to-br from-teal-100 to-teal-200'
+         'bg-white',
       ];
       
       // Convert productId to string and handle different data types
