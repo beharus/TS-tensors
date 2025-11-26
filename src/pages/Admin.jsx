@@ -27,11 +27,11 @@ const Admin = () => {
   // Test API connectivity
   const testAPIConnectivity = async () => {
     console.log("🔄 Testing API connectivity...");
-    
+
     try {
       // Test if API server is reachable
       const testUrl = `${API_BASE_URL}/${firstId}/change/${secondId}`;
-      
+
       const response = await fetch(testUrl, {
         method: 'GET',
         mode: 'cors',
@@ -40,7 +40,7 @@ const Admin = () => {
           'Accept': 'application/json',
         },
       });
-      
+
       console.log("🔧 Direct API test result:", response.status);
       return response.ok;
     } catch (error) {
@@ -52,10 +52,10 @@ const Admin = () => {
   // Simple fetch function with direct API calls
   const apiFetch = async (url, options = {}) => {
     const isGet = !options.method || options.method === 'GET';
-    
+
     try {
       console.log(`📡 Making ${options.method || 'GET'} request to:`, url);
-      
+
       const response = await fetch(url, {
         method: options.method || 'GET',
         mode: 'cors',
@@ -73,7 +73,7 @@ const Admin = () => {
 
       const text = await response.text();
       const data = text ? JSON.parse(text) : {};
-      
+
       console.log(`✅ ${options.method || 'GET'} request successful:`, data);
       return data;
 
@@ -118,7 +118,7 @@ const Admin = () => {
 
     } catch (error) {
       console.error("Error fetching products:", error);
-      
+
       let errorMessage = "Mahsulotlarni yuklashda xatolik!";
       if (error.message.includes('ulanish')) {
         errorMessage = "API serverga ulanish imkoni bo'lmadi. Server ishlamayotgan bo'lishi mumkin.";
@@ -127,7 +127,7 @@ const Admin = () => {
       } else if (error.message.includes('Failed to fetch')) {
         errorMessage = "Serverga ulanib bo'lmadi. Internet aloqasini tekshiring.";
       }
-      
+
       toast.error(errorMessage, 5000);
     } finally {
       setLoading(false);
@@ -212,12 +212,12 @@ const Admin = () => {
 
     } catch (error) {
       console.error("💥 Save product error:", error);
-      
+
       let errorMessage = "Mahsulotni saqlashda xatolik!";
       if (error.message.includes('Failed to fetch')) {
         errorMessage = "Serverga ulanib bo'lmadi. Internet aloqasini tekshiring.";
       }
-      
+
       toast.error(errorMessage, 5000);
     } finally {
       setSaving(false);
@@ -239,10 +239,10 @@ const Admin = () => {
 
       const modifiedItems = Array.from(modifiedProducts).map(id => {
         const product = products.find(p => p.card_id === id);
-        return { 
-          card_id: product.card_id, 
-          name: product.name, 
-          price: product.price 
+        return {
+          card_id: product.card_id,
+          name: product.name,
+          price: product.price
         };
       });
 
@@ -258,14 +258,14 @@ const Admin = () => {
       console.log("📨 Save all response:", result);
 
       // Update all original products
-      setOriginalProducts(prev => 
+      setOriginalProducts(prev =>
         prev.map(p => {
           const updatedProduct = products.find(mp => mp.card_id === p.card_id);
           if (updatedProduct) {
-            return { 
-              ...p, 
-              name: updatedProduct.name, 
-              price: updatedProduct.price 
+            return {
+              ...p,
+              name: updatedProduct.name,
+              price: updatedProduct.price
             };
           }
           return p;
@@ -277,12 +277,12 @@ const Admin = () => {
 
     } catch (error) {
       console.error("💥 Save all products error:", error);
-      
+
       let errorMessage = "Mahsulotlarni saqlashda xatolik!";
       if (error.message.includes('Failed to fetch')) {
         errorMessage = "Serverga ulanib bo'lmadi. Internet aloqasini tekshiring.";
       }
-      
+
       toast.error(errorMessage, 5000);
     } finally {
       setSaving(false);
@@ -297,82 +297,75 @@ const Admin = () => {
   if (loading) {
     return <LoadingSkeleton />;
   }
-
   return (
     <div className="min-h-screen bg-gray-50">
       <ToastContainer toasts={toasts} removeToast={removeToast} />
 
+      {/* Optimized Header for Mobile */}
       <header className="bg-linear-to-r from-orange-500 to-yellow-400 shadow-lg sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-            <div className="flex items-center justify-between lg:block">
-              <div className="flex items-center gap-2">
-                <span className="text-2xl font-bold text-gray-900">
-                  <span className="text-white">Tujjor</span>S
-                </span>
-                <span className="bg-gray-900 text-white text-sm px-3 py-1 rounded-full font-medium">
-                  Admin
-                </span>
-              </div>
-            </div>
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-3 sm:py-4">
+          <div className="flex items-center justify-between">
+            {/* Logo that navigates to main page */}
+            <button
+              onClick={() => navigate('/01a0c8271f6c4e77/')}
+              className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+            >
+              <span className="text-xl sm:text-2xl font-bold text-gray-900">
+                <span className="text-white">Tujjor</span>S
+              </span>
+            </button>
 
-            <div className="flex flex-col sm:flex-row gap-3">
-              <button
-                onClick={saveAllProducts}
-                disabled={saving || modifiedProducts.size === 0}
-                className="flex items-center gap-2 px-6 py-3 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white font-bold rounded-xl transition-all duration-300 hover:shadow-lg disabled:hover:shadow-none disabled:cursor-not-allowed"
-              >
-                <i className="fa-solid fa-floppy-disk"></i>
-                Barchasini saqlash ({modifiedProducts.size})
-              </button>
-              <button
-                onClick={() => navigate('/')}
-                className="flex items-center gap-2 px-6 py-3 bg-gray-900 hover:bg-gray-800 text-white font-bold rounded-xl transition-all duration-300 hover:shadow-lg"
-              >
-                <i className="fa-solid fa-arrow-left"></i>
-                Saytga qaytish
-              </button>
-            </div>
+            {/* Save All Button - Always on same line */}
+            <button
+              onClick={saveAllProducts}
+              disabled={saving || modifiedProducts.size === 0}
+              className="flex items-center justify-center gap-2 px-4 py-2.5 text-sm bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white font-bold rounded-xl transition-all duration-300 hover:shadow-lg disabled:hover:shadow-none disabled:cursor-not-allowed sm:px-6 sm:py-3 sm:text-base"
+            >
+              <i className="fa-solid fa-floppy-disk text-xs sm:text-sm"></i>
+              Barchasini saqlash ({modifiedProducts.size})
+            </button>
           </div>
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-          <div className="bg-white rounded-2xl shadow-lg p-6 flex items-center gap-4 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
-            <div className="w-16 h-16 bg-linear-to-r from-orange-500 to-yellow-400 rounded-full flex items-center justify-center">
-              <i className="fa-solid fa-cube text-2xl text-gray-900"></i>
+      {/* Main Content with Mobile Optimizations */}
+      <main className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8">
+        {/* Stats Cards - Stack on mobile */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6 sm:mb-8">
+          <div className="bg-white rounded-xl sm:rounded-2xl shadow-lg p-4 flex items-center gap-3 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+            <div className="w-12 h-12 sm:w-16 sm:h-16 bg-linear-to-r from-orange-500 to-yellow-400 rounded-full flex items-center justify-center">
+              <i className="fa-solid fa-cube text-lg sm:text-2xl text-gray-900"></i>
             </div>
             <div>
-              <h3 className="text-3xl font-bold text-gray-900">{products.length}</h3>
-              <p className="text-gray-600">Jami mahsulotlar</p>
+              <h3 className="text-2xl sm:text-3xl font-bold text-gray-900">{products.length}</h3>
+              <p className="text-sm sm:text-base text-gray-600">Jami mahsulotlar</p>
             </div>
           </div>
-          <div className="bg-white rounded-2xl shadow-lg p-6 flex items-center gap-4 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
-            <div className="w-16 h-16 bg-linear-to-r from-orange-500 to-yellow-400 rounded-full flex items-center justify-center">
-              <i className="fa-solid fa-edit text-2xl text-gray-900"></i>
+          <div className="bg-white rounded-xl sm:rounded-2xl shadow-lg p-4 flex items-center gap-3 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+            <div className="w-12 h-12 sm:w-16 sm:h-16 bg-linear-to-r from-orange-500 to-yellow-400 rounded-full flex items-center justify-center">
+              <i className="fa-solid fa-edit text-lg sm:text-2xl text-gray-900"></i>
             </div>
             <div>
-              <h3 className="text-3xl font-bold text-gray-900">{modifiedProducts.size}</h3>
-              <p className="text-gray-600">O'zgartirilgan</p>
+              <h3 className="text-2xl sm:text-3xl font-bold text-gray-900">{modifiedProducts.size}</h3>
+              <p className="text-sm sm:text-base text-gray-600">O'zgartirilgan</p>
             </div>
           </div>
         </div>
 
         {products.length === 0 ? (
-          <div className="text-center py-16">
-            <div className="bg-white rounded-2xl shadow-lg p-8 max-w-md mx-auto">
-              <i className="fa-solid fa-inbox text-6xl text-gray-300 mb-4"></i>
-              <h3 className="text-2xl font-bold text-gray-900 mb-3">
+          <div className="text-center py-8 sm:py-16">
+            <div className="bg-white rounded-xl sm:rounded-2xl shadow-lg p-6 sm:p-8 max-w-md mx-auto">
+              <i className="fa-solid fa-inbox text-4xl sm:text-6xl text-gray-300 mb-3 sm:mb-4"></i>
+              <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2 sm:mb-3">
                 Hech qanday mahsulot topilmadi
               </h3>
-              <p className="text-gray-600">
+              <p className="text-sm sm:text-base text-gray-600">
                 Ushbu do'konda hozircha mahsulotlar mavjud emas
               </p>
             </div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
             {products.map(product => (
               <AdminProductCard
                 key={product.card_id}
@@ -387,48 +380,50 @@ const Admin = () => {
         )}
       </main>
 
-      <footer className="bg-gray-900 text-white py-6">
+      {/* Footer */}
+      <footer className="bg-gray-900 text-white py-4 sm:py-6">
         <div className="max-w-7xl mx-auto px-4 text-center">
-          <p>&copy; 2024 TS-TujjorS Admin Panel. Barcha huquqlar himoyalangan.</p>
+          <p className="text-sm sm:text-base">&copy; 2024 TS-TujjorS Admin Panel. Barcha huquqlar himoyalangan.</p>
         </div>
       </footer>
     </div>
   );
 };
 
+// Updated Loading Skeleton for Mobile
 const LoadingSkeleton = () => (
   <div className="min-h-screen bg-gray-50">
     <header className="bg-linear-to-r from-orange-500 to-yellow-400 shadow-lg sticky top-0 z-40">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-3 sm:py-4">
         <div className="flex items-center justify-between">
-          <div className="h-8 bg-white bg-opacity-50 rounded w-48 animate-pulse"></div>
-          <div className="h-10 bg-white bg-opacity-50 rounded w-32 animate-pulse"></div>
+          <div className="h-6 sm:h-8 bg-white bg-opacity-50 rounded w-32 sm:w-48 animate-pulse"></div>
+          <div className="h-8 sm:h-10 bg-white bg-opacity-50 rounded w-24 sm:w-32 animate-pulse"></div>
         </div>
       </div>
     </header>
 
-    <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        {[...Array(3)].map((_, index) => (
-          <div key={index} className="bg-white rounded-2xl shadow-lg p-6 flex items-center gap-4 animate-pulse">
-            <div className="w-16 h-16 bg-gray-300 rounded-full"></div>
+    <main className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-8">
+        {[...Array(2)].map((_, index) => (
+          <div key={index} className="bg-white rounded-xl sm:rounded-2xl shadow-lg p-4 flex items-center gap-3 animate-pulse">
+            <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gray-300 rounded-full"></div>
             <div className="space-y-2">
-              <div className="h-8 bg-gray-300 rounded w-16"></div>
-              <div className="h-4 bg-gray-300 rounded w-24"></div>
+              <div className="h-6 sm:h-8 bg-gray-300 rounded w-12 sm:w-16"></div>
+              <div className="h-3 sm:h-4 bg-gray-300 rounded w-16 sm:w-24"></div>
             </div>
           </div>
         ))}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
         {[...Array(6)].map((_, index) => (
-          <div key={index} className="bg-white rounded-2xl shadow-lg overflow-hidden animate-pulse">
-            <div className="h-48 bg-gray-300"></div>
-            <div className="p-6 space-y-4">
-              <div className="h-4 bg-gray-300 rounded w-20"></div>
-              <div className="h-4 bg-gray-300 rounded w-3/4"></div>
-              <div className="h-10 bg-gray-300 rounded w-1/2"></div>
-              <div className="h-12 bg-gray-300 rounded"></div>
+          <div key={index} className="bg-white rounded-xl sm:rounded-2xl shadow-lg overflow-hidden animate-pulse">
+            <div className="h-40 sm:h-48 bg-gray-300"></div>
+            <div className="p-4 sm:p-6 space-y-3 sm:space-y-4">
+              <div className="h-3 sm:h-4 bg-gray-300 rounded w-16 sm:w-20"></div>
+              <div className="h-3 sm:h-4 bg-gray-300 rounded w-3/4"></div>
+              <div className="h-8 sm:h-10 bg-gray-300 rounded w-1/2"></div>
+              <div className="h-10 sm:h-12 bg-gray-300 rounded"></div>
             </div>
           </div>
         ))}
