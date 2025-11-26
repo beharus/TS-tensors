@@ -1,77 +1,84 @@
 // components/BarcodeScanner.jsx
-import React, { useEffect, useRef, useState } from 'react';
-import { BrowserMultiFormatReader } from '@zxing/library';
+import React, { useEffect, useRef, useState } from "react";
+import { BrowserMultiFormatReader, NotFoundException } from "@zxing/library";
 
-const BarcodeScanner = ({
-  isOpen,
-  onClose,
-  onBarcodeDetected,
-  onError
-}) => {
+const BarcodeScanner = ({ isOpen, onClose, onBarcodeDetected, onError }) => {
   const videoRef = useRef(null);
-  const codeReader = useRef(new BrowserMultiFormatReader());
-  const streamRef = useRef(null);
+  const codeReader = useRef(null);
+  const streamRef = useRef(null); // 🔥 NEW: Track the camera stream
   const [isScanning, setIsScanning] = useState(false);
   const [cameraError, setCameraError] = useState(null);
   const [hasPermission, setHasPermission] = useState(false);
   const [permissionAsked, setPermissionAsked] = useState(false);
   const [showPermissionScreen, setShowPermissionScreen] = useState(true);
+  const [scannerStarted, setScannerStarted] = useState(false);
 
+  // Initialize codeReader once
   useEffect(() => {
-    if (isOpen) {
-      // Show permission screen first if not already asked
-      if (!permissionAsked) {
-        setShowPermissionScreen(true);
-      } else {
-        startScanner();
-      }
-    } else {
-      stopScanner();
-    }
-
+    codeReader.current = new BrowserMultiFormatReader();
     return () => {
       stopScanner();
+      codeReader.current = null;
     };
-  }, [isOpen, permissionAsked]);
+  }, []);
 
-  // 🔥 STEP 1: Explicit permission request on button click
+  // Start/stop scanner based on modal state and permission
+  useEffect(() => {
+    if (!isOpen) {
+      stopScanner();
+      return;
+    }
+    if (permissionAsked && hasPermission && !scannerStarted) {
+      startScanner();
+    }
+  }, [isOpen, permissionAsked, hasPermission]);
+
+  // Request camera permission
   const askBrowserPermission = async () => {
     try {
       console.log('📸 Requesting camera permission...');
-      
-      // This WILL trigger the browser's native permission popup
       const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: true 
+        video: { 
+          facingMode: "environment",
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        } 
       });
       
-      // Immediately stop the stream - we just needed permission
-      stream.getTracks().forEach(track => track.stop());
+      // Store the stream for later use
+      streamRef.current = stream;
       
-      console.log('✅ Permission granted!');
+      // Stop immediately - we just needed permission
+      stream.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+
       setPermissionAsked(true);
-      setShowPermissionScreen(false);
       setHasPermission(true);
-      
-      // Start the actual scanner
-      startScanner();
-      
+      setShowPermissionScreen(false);
+
     } catch (err) {
-      console.error('❌ Permission denied:', err);
-      setCameraError("Kameraga ruxsat berilmadi. Iltimos, brauzer sozlamalaridan ruxsat bering.");
+      console.error("Permission denied or error:", err);
       setPermissionAsked(true);
+      setHasPermission(false);
+      setCameraError(
+        "Kameraga ruxsat berilmadi. Iltimos, brauzer sozlamalaridan ruxsat bering."
+      );
+      onError?.(err);
     }
   };
 
+  // Start ZXing scanner
   const startScanner = async () => {
-    if (!isOpen || !hasPermission) return;
+    if (scannerStarted || !isOpen || !hasPermission) return;
 
     try {
+      setScannerStarted(true);
       setCameraError(null);
       setIsScanning(true);
 
-      console.log('🔄 Starting scanner with permission...');
+      console.log('🎯 Starting ZXing scanner...');
 
-      // Now get the actual stream for scanning
+      // Get the actual stream for scanning
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { 
           facingMode: "environment",
@@ -82,11 +89,12 @@ const BarcodeScanner = ({
 
       streamRef.current = stream;
 
-      // Set up video
+      // Set up video element with the stream
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         videoRef.current.setAttribute('playsinline', 'true');
         
+        // Wait for video to be ready
         await new Promise((resolve) => {
           if (videoRef.current.readyState >= 4) {
             resolve();
@@ -94,113 +102,124 @@ const BarcodeScanner = ({
             videoRef.current.onloadedmetadata = resolve;
           }
         });
-
-        await videoRef.current.play();
       }
 
       // Start ZXing decoding
-      console.log('🎯 Starting ZXing decoding...');
-      
-      codeReader.current.decodeFromVideoElement(
+      codeReader.current.decodeFromVideoDevice(
+        null, // Let ZXing choose the camera automatically
         videoRef.current,
         (result, err) => {
           if (result) {
             console.log('🎉 Barcode detected:', result.getText());
             handleSuccessfulScan(result.getText());
-          }
-          
-          if (err && !err.message?.includes('NotFoundException')) {
-            console.warn('Scanning error:', err);
+          } else if (err && !(err instanceof NotFoundException)) {
+            console.warn("Scanning error:", err);
+            onError?.(err);
           }
         }
       );
 
       console.log('✅ Scanner started successfully!');
 
-    } catch (error) {
-      console.error('❌ Scanner failed:', error);
-      handleScannerError(error);
+    } catch (err) {
+      console.error("Scanner failed:", err);
+      setScannerStarted(false);
+      setIsScanning(false);
+      handleScannerError(err);
     }
   };
 
+  // Handle successful scan
   const handleSuccessfulScan = (barcode) => {
-    console.log('✅ Scan successful:', barcode);
+    console.log('✅ Scan successful, stopping scanner...');
     stopScanner();
     onBarcodeDetected(barcode);
   };
 
+  // Handle scanner errors
   const handleScannerError = (error) => {
-    if (error.name === 'NotAllowedError') {
-      setCameraError("Kameraga ruxsat berilmadi. Iltimos, brauzer sozlamalaridan ruxsat bering.");
-    } else if (error.name === 'NotFoundError') {
-      setCameraError("Kamera topilmadi.");
+    if (!error) return;
+
+    console.error('Scanner error:', error);
+
+    if (error.name === "NotAllowedError" || error.name === "SecurityError") {
+      setCameraError(
+        "Kameraga ruxsat berilmadi. Iltimos, brauzer sozlamalaridan ruxsat bering."
+      );
+    } else if (error.name === "NotFoundError" || error.name === "OverconstrainedError") {
+      setCameraError("Kamera topilmadi yoki sozlamalar mos kelmadi.");
     } else {
-      setCameraError("Kamerani ishga tushirib bo'lmadi.");
+      setCameraError("Kamerani ishga tushirib bo'lmadi: " + error.message);
     }
-    
+
     onError?.(error);
     setIsScanning(false);
+    setScannerStarted(false);
   };
 
+  // Stop scanner and camera
   const stopScanner = () => {
     console.log('🛑 Stopping scanner...');
-
+    
     try {
-      codeReader.current.reset();
-      
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach(track => track.stop());
-        streamRef.current = null;
-      }
-
-      if (videoRef.current) {
-        videoRef.current.srcObject = null;
-      }
-
-      setIsScanning(false);
-      setCameraError(null);
-
-    } catch (error) {
-      console.warn('Error stopping scanner:', error);
+      codeReader.current?.reset();
+    } catch (e) {
+      console.warn("Error resetting scanner:", e);
     }
+
+    // Stop camera stream
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+    }
+
+    // Clear video element
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+
+    setIsScanning(false);
+    setScannerStarted(false);
+    setCameraError(null);
   };
 
   const handleRetry = async () => {
-    console.log('🔄 Retrying camera...');
+    console.log('🔄 Retrying scanner...');
     stopScanner();
-    
     if (!hasPermission) {
-      // Go back to permission screen
       setShowPermissionScreen(true);
       setCameraError(null);
     } else {
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise((res) => setTimeout(res, 500));
       startScanner();
     }
   };
 
   const openCameraSettings = () => {
     if (/iPhone|iPad|iPod/.test(navigator.userAgent)) {
-      alert("Safari sozlamalariga o'ting: Sozlamalar > Safari > Kamera > Ushbu saytga ruxsat bering");
+      alert(
+        "Safari sozlamalariga o'ting: Sozlamalar > Safari > Kamera > Ushbu saytga ruxsat bering"
+      );
     } else {
       alert("Brauzer sozlamalariga o'ting: Site settings > Camera > Allow");
     }
   };
 
   const handleClose = () => {
+    console.log('🚪 Closing scanner...');
     stopScanner();
     setShowPermissionScreen(true);
     setPermissionAsked(false);
     setHasPermission(false);
+    setScannerStarted(false);
     onClose();
   };
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl max-w-md w-full overflow-hidden shadow-2xl">
-        
         {/* Header */}
         <div className="flex justify-between items-center p-4 border-b border-gray-200 bg-white">
           <h3 className="text-lg font-semibold text-gray-900">
@@ -215,7 +234,7 @@ const BarcodeScanner = ({
           </button>
         </div>
 
-        {/* PERMISSION SCREEN */}
+        {/* Permission Screen */}
         {showPermissionScreen && (
           <div className="p-6 text-center">
             <div className="mb-6">
@@ -226,9 +245,10 @@ const BarcodeScanner = ({
                 Kameraga Ruxsat Kerak
               </h4>
               <p className="text-gray-600 mb-4">
-                QR kod va shtrix-kodlarni skaner qilish uchun kamerangizdan foydalanishimizga ruxsat bering.
+                QR kod va shtrix-kodlarni skaner qilish uchun kamerangizdan
+                foydalanishimizga ruxsat bering.
               </p>
-              
+
               <div className="bg-blue-50 rounded-lg p-4 text-left text-sm text-blue-800 mb-6">
                 <p className="font-medium mb-2">📱 Qanday ishlaydi:</p>
                 <ul className="space-y-1">
@@ -247,7 +267,7 @@ const BarcodeScanner = ({
                 <i className="fa-solid fa-camera"></i>
                 Kameraga Ruxsat Berish
               </button>
-              
+
               <button
                 onClick={handleClose}
                 className="w-full py-3 bg-gray-500 text-white rounded-xl hover:bg-gray-600 transition-colors font-medium"
@@ -270,10 +290,9 @@ const BarcodeScanner = ({
           </div>
         )}
 
-        {/* SCANNER SCREEN */}
+        {/* Scanner Screen */}
         {!showPermissionScreen && hasPermission && (
           <>
-            {/* Scanner View */}
             <div className="relative bg-black aspect-video">
               <video
                 ref={videoRef}
@@ -282,83 +301,57 @@ const BarcodeScanner = ({
                 playsInline
                 autoPlay
               />
-
-              {/* Scanning Overlay */}
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <div className="relative w-64 h-40">
-                  <div className="w-full h-full border-2 border-green-400 rounded-xl"></div>
-                  <div className="absolute left-2 right-2 top-0 h-1 bg-green-400 rounded-full shadow-[0_0_12px_rgba(74,222,128,0.9)] animate-scan-line"></div>
-                  <div className="absolute -top-1 -left-1 w-5 h-5 border-t-2 border-l-2 border-green-400 rounded-tl-lg"></div>
-                  <div className="absolute -top-1 -right-1 w-5 h-5 border-t-2 border-r-2 border-green-400 rounded-tr-lg"></div>
-                  <div className="absolute -bottom-1 -left-1 w-5 h-5 border-b-2 border-l-2 border-green-400 rounded-bl-lg"></div>
-                  <div className="absolute -bottom-1 -right-1 w-5 h-5 border-b-2 border-r-2 border-green-400 rounded-br-lg"></div>
+              
+              {/* Scanning overlay */}
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="border-2 border-green-400 rounded-lg w-64 h-40 relative">
+                  <div className="absolute -top-1 -left-1 w-4 h-4 border-t-2 border-l-2 border-green-400"></div>
+                  <div className="absolute -top-1 -right-1 w-4 h-4 border-t-2 border-r-2 border-green-400"></div>
+                  <div className="absolute -bottom-1 -left-1 w-4 h-4 border-b-2 border-l-2 border-green-400"></div>
+                  <div className="absolute -bottom-1 -right-1 w-4 h-4 border-b-2 border-r-2 border-green-400"></div>
                 </div>
               </div>
 
-              {/* Loading State */}
-              {!isScanning && !cameraError && (
-                <div className="absolute inset-0 bg-black/70 flex items-center justify-center">
-                  <div className="text-center text-white">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-400 mx-auto mb-4"></div>
-                    <p className="text-lg font-medium">Kamera ochilmoqda...</p>
-                  </div>
-                </div>
-              )}
-
-              {/* Error Message */}
               {cameraError && (
                 <div className="absolute inset-0 bg-black/80 flex items-center justify-center p-4">
-                  <div className="text-center text-white max-w-sm">
-                    <i className="fa-solid fa-camera-slash text-5xl mb-4 text-red-400"></i>
-                    <p className="text-lg font-medium mb-3">Xatolik</p>
-                    <p className="text-sm mb-4">{cameraError}</p>
-                    <div className="flex flex-col gap-2">
-                      <button
-                        onClick={handleRetry}
-                        className="px-6 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors font-medium"
-                      >
-                        🔄 Qayta urinish
-                      </button>
-                      <button
-                        onClick={() => setShowPermissionScreen(true)}
-                        className="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors font-medium"
-                      >
-                        ⚙️ Ruxsatni so'rash
-                      </button>
-                    </div>
+                  <div className="text-center text-white">
+                    <i className="fa-solid fa-triangle-exclamation text-3xl mb-3 text-red-400"></i>
+                    <p className="text-sm mb-3">{cameraError}</p>
+                    <button
+                      onClick={handleRetry}
+                      className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                    >
+                      Qayta urinish
+                    </button>
                   </div>
                 </div>
               )}
             </div>
 
-            {/* Instructions */}
             <div className="p-4 text-center bg-white">
               <p className="font-medium text-gray-700">
                 QR yoki shtrix-kodni ramkaga qaratib turing
               </p>
-              {isScanning && (
-                <p className="text-sm text-gray-500 mt-1">
-                  Kod avtomatik ravishda skanerlanadi
+              {isScanning && !cameraError && (
+                <p className="text-sm text-green-600 mt-1">
+                  🔍 Skanerlash faol...
                 </p>
               )}
             </div>
 
-            {/* Actions */}
-            <div className="p-4 border-t border-gray-200 bg-gray-50">
-              <div className="flex gap-3">
-                <button
-                  onClick={handleRetry}
-                  className="flex-1 py-3 bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition-colors font-medium"
-                >
-                  Qayta urinish
-                </button>
-                <button
-                  onClick={handleClose}
-                  className="flex-1 py-3 bg-gray-600 text-white rounded-xl hover:bg-gray-700 transition-colors font-medium"
-                >
-                  Yopish
-                </button>
-              </div>
+            <div className="p-4 border-t border-gray-200 bg-gray-50 flex gap-3">
+              <button
+                onClick={handleRetry}
+                className="flex-1 py-3 bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition-colors font-medium"
+              >
+                Qayta urinish
+              </button>
+              <button
+                onClick={handleClose}
+                className="flex-1 py-3 bg-gray-600 text-white rounded-xl hover:bg-gray-700 transition-colors font-medium"
+              >
+                Yopish
+              </button>
             </div>
           </>
         )}
