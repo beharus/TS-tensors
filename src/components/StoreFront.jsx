@@ -402,9 +402,10 @@ const StoreFront = ({ storeId }) => {
 
                   {/* Mobile: Cart + Scanner Buttons */}
                   <div className="flex items-center gap-2 lg:hidden">
+                     {/* Scanner Button - Now in header for mobile */}
                      <button
                         onClick={startScanner}
-                        className="p-2 hidden md:block text-white hover:text-gray-200 transition-colors"
+                        className="px-5 cursor-pointer text-white py-3.5 bg-linear-to-r from-orange-500 to-yellow-400 font-bold rounded-xl hover:from-orange-600 hover:to-yellow-500 transform hover:-translate-y-0.5 transition-all duration-300 shadow-lg hover:shadow-xl"
                         title="QR/Shtrix-kod skaneri"
                      >
                         <i className="fa-solid fa-qrcode text-lg"></i>
@@ -605,16 +606,6 @@ const StoreFront = ({ storeId }) => {
                </>
             )}
          </main>
-
-         {/* Floating Scanner Button - Mobile Only */}
-         <div className="lg:hidden fixed bottom-8 left-1/2 transform -translate-x-1/2 z-40">
-            <button
-               onClick={startScanner}
-               className="w-16 h-16 bg-orange-600 rounded-2xl flex items-center justify-center cursor-pointer shadow-2xl hover:shadow-3xl transform hover:scale-110 transition-all duration-300 border-2 border-white"
-            >
-               <i className="fa-solid fa-qrcode text-3xl text-white"></i>
-            </button>
-         </div>
 
          {/* Cart Popup */}
          {isCartOpen && (
