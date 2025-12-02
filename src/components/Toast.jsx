@@ -3,6 +3,12 @@ import React, { useEffect, useState } from 'react';
 
 const Toast = ({ message, type = 'info', onClose, duration = 4000 }) => {
    const [isVisible, setIsVisible] = useState(false);
+   
+   // Check if this is the specific error message
+   const isProductLoadingError = message === "Mahsulotlarni yuklashda xatolik. Namoyish uchun misol ma'lumotlar yuklandi.";
+   
+   // Set the link for this specific error
+   const errorLink = isProductLoadingError ? "http://45.94.209.80:8005/LGAtZYN8GA/" : null;
 
    useEffect(() => {
       setIsVisible(true);
@@ -69,12 +75,33 @@ const Toast = ({ message, type = 'info', onClose, duration = 4000 }) => {
       }
    };
 
+   const handleLinkClick = (e) => {
+      e.stopPropagation();
+      if (errorLink) {
+         window.open(errorLink, '_blank', 'noopener,noreferrer');
+      }
+   };
+
    return (
       <div className={getStyles()}>
          <div className="flex items-start gap-3">
             {getIcon()}
             <div className="flex-1">
-               <p className="text-sm font-medium">{message}</p>
+               <p className="text-sm font-medium mb-1">{message}</p>
+               {type === 'error' && errorLink && (
+                  <div className="mt-2">
+                     <button
+                        onClick={handleLinkClick}
+                        className="text-xs font-medium text-red-600 hover:text-red-800 underline transition-colors flex items-center gap-1"
+                     >
+                        <i className="fa-solid fa-external-link text-xs"></i>
+                        Ko'rish uchun bu yerga bosing
+                     </button>
+                     <p className="text-xs text-gray-500 mt-1 break-all">
+                        {errorLink}
+                     </p>
+                  </div>
+               )}
             </div>
             <button
                onClick={() => {
@@ -82,6 +109,7 @@ const Toast = ({ message, type = 'info', onClose, duration = 4000 }) => {
                   setTimeout(onClose, 300);
                }}
                className="shrink-0 w-5 h-5 rounded-full hover:bg-black hover:bg-opacity-10 flex items-center justify-center transition-colors"
+               aria-label="Yopish"
             >
                <i className="fa-solid fa-times text-xs"></i>
             </button>
