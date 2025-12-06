@@ -154,23 +154,6 @@ const ProductCard = ({ product, cart, onQuantityChange, showCount = false }) => 
           </button>
         )}
 
-        {/* Stock status info for warehouse mode */}
-        {showCount && (
-          <div className="mt-3">
-            {availableCount <= 0 ? (
-              <div className="flex items-center justify-center gap-2 px-3 py-2 bg-red-50 rounded-lg">
-                <i className="fa-solid fa-exclamation-triangle text-red-500"></i>
-                <span className="text-sm text-red-600 font-medium">Mahsulot omborda yoʻq</span>
-              </div>
-            ) : availableCount <= 5 ? (
-              <div className="flex items-center justify-center gap-2 px-3 py-2 bg-yellow-50 rounded-lg">
-                <i className="fa-solid fa-exclamation-circle text-yellow-500"></i>
-                <span className="text-sm text-yellow-700 font-medium">Kam qolgan: {availableCount} ta</span>
-              </div>
-            ) : null}
-          </div>
-        )}
-
         {/* Barcode display for warehouse mode */}
         {showCount && product.barcode && (
           <div className="mt-2 pt-2 border-t border-gray-100">
