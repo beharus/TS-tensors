@@ -1,6 +1,6 @@
 // components/StoreFront.jsx
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useParams, useLocation } from 'react-router-dom';
 import ProductCard from './ProductCard';
 import CartPopup from './CartPopup';
 import SearchBar from './SearchBar';
@@ -11,9 +11,11 @@ import useToast from '../hooks/useToast';
 
 const API_BASE_URL = "https://tujjors.uz/api";
 
-const StoreFront = ({ storeId }) => {
-   const navigate = useNavigate();
+const StoreFront = ({ isWarehouse = false }) => {
+   const { id: storeId } = useParams();
+   const location = useLocation();
    const { toasts, toast, removeToast } = useToast();
+   const [client, setClient] = useState({});
    const [products, setProducts] = useState([]);
    const [filteredProducts, setFilteredProducts] = useState([]);
    const [cart, setCart] = useState([]);
@@ -26,13 +28,16 @@ const StoreFront = ({ storeId }) => {
    const [categories, setCategories] = useState([]);
    const [showScanner, setShowScanner] = useState(false);
    const [showCategoryMenu, setShowCategoryMenu] = useState(false);
-   const itemsPerPage = 8;
+   const itemsPerPage = 20;
+
+   // Determine if we're in warehouse mode from route
+   const isWarehouseMode = isWarehouse || location.pathname.includes('/warehouse');
 
    useEffect(() => {
       if (storeId) {
          fetchProducts();
       }
-   }, [storeId]);
+   }, [storeId, isWarehouseMode]);
 
    useEffect(() => {
       filterProducts();
@@ -44,7 +49,8 @@ const StoreFront = ({ storeId }) => {
       setLoading(true);
 
       try {
-         const url = `${API_BASE_URL}/${storeId}`;
+         const endpoint = isWarehouseMode ? 'warehouse' : '';
+         const url = `${API_BASE_URL}/${storeId}/${endpoint}`;
          console.log("Fetching from:", url);
          const response = await fetch(url);
 
@@ -54,6 +60,11 @@ const StoreFront = ({ storeId }) => {
 
          const data = await response.json();
          console.log("API Response:", data);
+
+         // Set client name from API (for warehouse mode)
+         if (data.client && data.client.name) {
+            setClient(data.client);
+         }
 
          // Validate API structure
          if (!data || !Array.isArray(data.cards)) {
@@ -68,7 +79,8 @@ const StoreFront = ({ storeId }) => {
             price: item.price || 0,
             image: fixImageUrl(item.image) || "https://via.placeholder.com/300x200",
             category: item.category || "Boshqa",
-            barcode: item.barcode || null
+            barcode: item.barcode || null,
+            count: item.count || 0 // Available count (warehouse mode)
          }));
 
          setProducts(transformed);
@@ -82,6 +94,9 @@ const StoreFront = ({ storeId }) => {
          console.error("Error fetching products:", error);
          toast.error("Mahsulotlarni yuklashda xatolik. Namoyish uchun misol ma'lumotlar yuklandi.", 5000);
          setProducts(getSampleProducts());
+         if (isWarehouseMode) {
+            setClient({ name: "Demo Do'kon" });
+         }
       } finally {
          setLoading(false);
       }
@@ -132,6 +147,15 @@ const StoreFront = ({ storeId }) => {
                return updatedCart.filter(item => item.card_id !== productId);
             }
 
+            // Check if quantity exceeds available count (warehouse mode)
+            if (isWarehouseMode) {
+               const maxAvailable = product.count || 0;
+               if (newQuantity > maxAvailable) {
+                  toast.warning(`Faqat ${maxAvailable} ta mavjud!`, 3000);
+                  return updatedCart;
+               }
+            }
+
             // Update quantity
             updatedCart[existingItemIndex] = {
                ...updatedCart[existingItemIndex],
@@ -144,6 +168,15 @@ const StoreFront = ({ storeId }) => {
 
             return updatedCart;
          } else if (change > 0) {
+            // Check if adding exceeds available count (warehouse mode)
+            if (isWarehouseMode) {
+               const maxAvailable = product.count || 0;
+               if (change > maxAvailable) {
+                  toast.warning(`Faqat ${maxAvailable} ta mavjud!`, 3000);
+                  return prevCart;
+               }
+            }
+
             // Add new item only if change is positive
             toast.success(`"${product.name}" dan ${change} ta savatga qo'shildi!`, 2000);
             return [...prevCart, {
@@ -158,6 +191,10 @@ const StoreFront = ({ storeId }) => {
 
    const getCartCount = () => {
       return cart.reduce((total, item) => total + item.quantity, 0);
+   };
+
+   const getCartTotal = () => {
+      return cart.reduce((total, item) => total + (item.price * item.quantity), 0);
    };
 
    // Barcode scanning functionality
@@ -196,12 +233,9 @@ const StoreFront = ({ storeId }) => {
          if (matchingProducts.length > 0) {
             const product = matchingProducts[0];
 
-            // OPTION 1: Auto-add to cart
+            // Auto-add to cart
             updateCartQuantity(product.card_id, 1);
             toast.success(`"${product.name}" savatga qo'shildi!`, 3000);
-
-            // OPTION 2: Just show in search (comment out the above line if you prefer this)
-            // toast.success(`Mahsulot topildi: ${product.name}`, 3000);
 
          } else {
             toast.info(`Ushbu shtrix-kod bilan mahsulot topilmadi: ${cleanBarcode}`, 4000);
@@ -299,7 +333,8 @@ const StoreFront = ({ storeId }) => {
             price: 24000,
             image: "https://via.placeholder.com/300x200",
             category: "Boshqa",
-            barcode: 1234567890
+            barcode: 1234567890,
+            count: isWarehouseMode ? 5 : 0
          },
          {
             card_id: 2523,
@@ -307,7 +342,8 @@ const StoreFront = ({ storeId }) => {
             price: 8500000,
             image: "https://via.placeholder.com/300x200",
             category: "Elektronika",
-            barcode: 9876543210
+            barcode: 9876543210,
+            count: isWarehouseMode ? 3 : 0
          }
       ];
    };
@@ -326,6 +362,22 @@ const StoreFront = ({ storeId }) => {
       return <LoadingSkeleton />;
    }
 
+   // Determine header title
+   const getHeaderTitle = () => {
+      if (isWarehouseMode) {
+         return client.name || "Do'kon";
+      }
+      return "TujjorS";
+   };
+
+   // Determine page title
+   const getPageTitle = () => {
+      if (isWarehouseMode) {
+         return "Omborxona";
+      }
+      return "Mahsulotlar";
+   };
+
    return (
       <div className="min-h-screen bg-gray-50 flex flex-col">
          {/* Toast Container */}
@@ -343,7 +395,7 @@ const StoreFront = ({ storeId }) => {
          <header className="bg-linear-to-r from-yellow-500 to-orange-400 shadow-lg sticky top-0 z-40">
             <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2 sm:py-4">
                <div className="flex items-center justify-between">
-                  {/* Mobile: Burger Menu + Logo */}
+                  {/* Mobile: Burger Menu + Title */}
                   <div className="flex items-center gap-2 lg:hidden">
                      <button
                         onClick={() => setShowCategoryMenu(true)}
@@ -351,16 +403,19 @@ const StoreFront = ({ storeId }) => {
                      >
                         <i className="fa-solid fa-bars text-lg"></i>
                      </button>
-                     <a href="/" className="text-xl font-bold text-white">
-                        TujjorS
-                     </a>
+                     <div className="text-white">
+                        <h1 className="text-lg font-bold line-clamp-1">{getHeaderTitle()}</h1>
+                     </div>
                   </div>
 
-                  {/* Desktop: Logo */}
+                  {/* Desktop: Title */}
                   <div className="hidden lg:block">
-                     <a href="/" className="text-2xl font-bold text-gray-900">
-                        <span className="text-white">Tujjor</span>S
-                     </a>
+                     <h1 className="text-2xl font-bold text-white line-clamp-1">
+                        {getHeaderTitle()}
+                     </h1>
+                     {isWarehouseMode && (
+                        <p className="text-white/80 text-sm">Omborxona boshqaruvi</p>
+                     )}
                   </div>
 
                   {/* Search Bar - Hidden on mobile, show on sm and up */}
@@ -389,7 +444,7 @@ const StoreFront = ({ storeId }) => {
 
                      <button
                         onClick={() => setIsCartOpen(true)}
-                        className="px-5 cursor-pointer text-white py-3.5 bg-linear-to-r from-orange-500 to-yellow-400 font-bold rounded-xl hover:from-orange-600 hover:to-yellow-500 transform hover:-translate-y-0.5 transition-all duration-300 shadow-lg hover:shadow-xl"
+                        className="px-5 cursor-pointer text-white py-3.5 bg-linear-to-r from-orange-500 to-yellow-400 font-bold rounded-xl hover:from-orange-600 hover:to-yellow-500 transform hover:-translate-y-0.5 transition-all duration-300 shadow-lg hover:shadow-xl relative"
                      >
                         <i className="fa-solid fa-cart-shopping"></i>
                         {getCartCount() > 0 && (
@@ -413,7 +468,7 @@ const StoreFront = ({ storeId }) => {
 
                      <button
                         onClick={() => setIsCartOpen(true)}
-                        className="relative p-2 hover:text-gray-200 px-5 cursor-pointer text-white py-3.5 bg-linear-to-r from-orange-500 to-yellow-400 font-bold rounded-xl hover:from-orange-600 hover:to-yellow-500 transform hover:-translate-y-0.5 transition-all duration-300 shadow-lg hover:shadow-xl"
+                        className="relative px-5 cursor-pointer text-white py-3.5 bg-linear-to-r from-orange-500 to-yellow-400 font-bold rounded-xl hover:from-orange-600 hover:to-yellow-500 transform hover:-translate-y-0.5 transition-all duration-300 shadow-lg hover:shadow-xl"
                      >
                         <i className="fa-solid fa-cart-shopping text-lg"></i>
                         {getCartCount() > 0 && (
@@ -552,14 +607,28 @@ const StoreFront = ({ storeId }) => {
             <div className="mb-6 flex justify-between items-center">
                <div>
                   <h2 className="text-2xl font-bold text-gray-900">
-                     Mahsulotlar ({filteredProducts.length})
+                     {getPageTitle()} ({filteredProducts.length})
                   </h2>
+                  {isWarehouseMode && (
+                     <p className="text-gray-600 text-sm">
+                        Jami: {products.reduce((sum, p) => sum + (p.count || 0), 0)} ta mahsulot mavjud
+                     </p>
+                  )}
                   {filteredProducts.length !== products.length && (
                      <p className="text-gray-600 text-sm">
                         {products.length} ta mahsulotdan {filteredProducts.length} tasi topildi
                      </p>
                   )}
                </div>
+               
+               {/* Cart Summary Button */}
+               <button
+                  onClick={() => setIsCartOpen(true)}
+                  className="lg:hidden px-4 py-2 bg-linear-to-r from-orange-500 to-yellow-400 text-white font-bold rounded-lg hover:from-orange-600 hover:to-yellow-500 transition-colors shadow-md"
+               >
+                  <i className="fa-solid fa-cart-shopping mr-2"></i>
+                  {getCartCount()} ta • {new Intl.NumberFormat("uz-UZ").format(getCartTotal())} so'm
+               </button>
             </div>
 
             {currentProducts.length === 0 ? (
@@ -587,22 +656,25 @@ const StoreFront = ({ storeId }) => {
                </div>
             ) : (
                <>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
                      {currentProducts.map(product => (
                         <ProductCard
                            key={product.card_id}
                            product={product}
                            cart={cart}
                            onQuantityChange={updateCartQuantity}
+                           showCount={isWarehouseMode} // Show available count only in warehouse mode
                         />
                      ))}
                   </div>
 
-                  <Pagination
-                     currentPage={currentPage}
-                     totalPages={totalPages}
-                     onPageChange={setCurrentPage}
-                  />
+                  {totalPages > 1 && (
+                     <Pagination
+                        currentPage={currentPage}
+                        totalPages={totalPages}
+                        onPageChange={setCurrentPage}
+                     />
+                  )}
                </>
             )}
          </main>
@@ -614,13 +686,33 @@ const StoreFront = ({ storeId }) => {
                onClose={() => setIsCartOpen(false)}
                onConfirmOrder={confirmOrder}
                isSubmitting={isSubmitting}
+               storeName={isWarehouseMode ? client.name : "TujjorS"}
             />
          )}
 
+         {/* Floating Cart Button for Mobile */}
+         {getCartCount() > 0 && (
+            <div className="lg:hidden fixed bottom-6 right-6 z-30">
+               <button
+                  onClick={() => setIsCartOpen(true)}
+                  className="px-6 py-3 bg-linear-to-r from-orange-500 to-yellow-400 text-white font-bold rounded-full shadow-2xl hover:from-orange-600 hover:to-yellow-500 transform hover:-translate-y-0.5 transition-all duration-300 flex items-center gap-2"
+               >
+                  <i className="fa-solid fa-cart-shopping"></i>
+                  <span>{getCartCount()} ta • {new Intl.NumberFormat("uz-UZ").format(getCartTotal())} so'm</span>
+               </button>
+            </div>
+         )}
+
          {/* Footer */}
-         <footer className="bg-gray-900 text-white py-6">
+         <footer className="bg-gray-900 text-white py-6 mt-8">
             <div className="max-w-7xl mx-auto px-4 text-center">
-               <p>&copy; 2024 TS-TujjorS. Barcha huquqlar himoyalangan.</p>
+               <p className="font-medium mb-2">
+                  {isWarehouseMode ? (client.name || "Do'kon") : "TujjorS"}
+               </p>
+               <p className="text-sm text-gray-400">
+                  {isWarehouseMode ? "Omborxona boshqaruvi" : "Online do'kon"}
+               </p>
+               <p className="text-sm text-gray-400 mt-2">&copy; 2024 TujjorS. Barcha huquqlar himoyalangan.</p>
             </div>
          </footer>
       </div>
@@ -629,8 +721,8 @@ const StoreFront = ({ storeId }) => {
 
 const LoadingSkeleton = () => (
    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-         {[...Array(8)].map((_, index) => (
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
+         {[...Array(20)].map((_, index) => (
             <div key={index} className="bg-white rounded-2xl shadow-lg overflow-hidden animate-pulse">
                <div className="h-48 bg-gray-300"></div>
                <div className="p-4 space-y-3">

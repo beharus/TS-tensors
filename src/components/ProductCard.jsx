@@ -1,9 +1,12 @@
 // components/ProductCard.jsx
 import React from 'react';
 
-const ProductCard = ({ product, cart, onQuantityChange }) => {
+const ProductCard = ({ product, cart, onQuantityChange, showCount = false }) => {
   const cartItem = cart.find(item => item.card_id === product.card_id);
   const currentQuantity = cartItem ? cartItem.quantity : 0;
+  
+  // Get available count from product (for warehouse mode)
+  const availableCount = product.count || 0;
 
   const formatPrice = (price) => {
     return new Intl.NumberFormat("uz-UZ").format(price) + " so'm";
@@ -43,19 +46,51 @@ const ProductCard = ({ product, cart, onQuantityChange }) => {
   const handleAddToCart = (e) => {
     e.preventDefault();
     e.stopPropagation();
+    
+    // Check if product is available (warehouse mode)
+    if (showCount && availableCount <= 0) {
+      return; // Don't add if no stock available
+    }
+    
     onQuantityChange(product.card_id, 1);
+  };
+
+  // Check if product can be added (warehouse mode)
+  const canAddToCart = () => {
+    if (showCount) {
+      if (availableCount <= 0) return false;
+      if (currentQuantity >= availableCount) return false;
+    }
+    return true;
+  };
+
+  // Check if increment button should be disabled (warehouse mode)
+  const isIncrementDisabled = () => {
+    if (showCount) {
+      return currentQuantity >= availableCount;
+    }
+    return false;
   };
 
   return (
     <div className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 hover:-translate-y-2 cursor-pointer">
       {/* Product Image Container with Colored Background */}
-      <div className={`h-48 overflow-hidden ${getProductColor(product.card_id)} flex items-center justify-center`}>
+      <div className={`h-48 overflow-hidden ${getProductColor(product.card_id)} flex items-center justify-center relative`}>
         <img
           src={product.image}
           alt={product.name}
           className="w-full h-full object-contain p-4 hover:scale-105 transition-transform duration-300"
           onError={handleImageError}
         />
+        
+        {/* Available count badge for warehouse mode */}
+        {showCount && (
+          <div className="absolute top-3 right-3">
+            <div className={`px-2 py-1 rounded-full text-xs font-bold shadow-lg ${availableCount > 0 ? 'bg-blue-500 text-white' : 'bg-red-500 text-white'}`}>
+              {availableCount > 0 ? `${availableCount} ta` : 'Yoʻq'}
+            </div>
+          </div>
+        )}
       </div>
       
       <div className="p-4">
@@ -72,28 +107,37 @@ const ProductCard = ({ product, cart, onQuantityChange }) => {
             <div className="flex items-center gap-1 flex-1 justify-between">
               <button
                 onClick={(e) => handleQuantityClick(e, -5)}
-                className="flex w-10 h-10 items-center justify-center bg-linear-to-r from-orange-500 to-yellow-400 text-white rounded-lg hover:from-orange-600 hover:to-yellow-500 transform hover:-translate-y-0.5 transition-all duration-200 font-bold text-sm shadow-md"
+                className="flex w-10 h-10 items-center justify-center bg-linear-to-r from-orange-500 to-yellow-400 text-white rounded-lg hover:from-orange-600 hover:to-yellow-500 transform hover:-translate-y-0.5 transition-all duration-200 font-bold text-sm shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 -5
               </button>
               <button
                 onClick={(e) => handleQuantityClick(e, -1)}
-                className="w-10 h-10 flex items-center justify-center bg-linear-to-r from-orange-500 to-yellow-400 text-white rounded-lg hover:from-orange-600 hover:to-yellow-500 transform hover:-translate-y-0.5 transition-all duration-200 font-bold shadow-md"
+                className="w-10 h-10 flex items-center justify-center bg-linear-to-r from-orange-500 to-yellow-400 text-white rounded-lg hover:from-orange-600 hover:to-yellow-500 transform hover:-translate-y-0.5 transition-all duration-200 font-bold shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 -1
               </button>
-              <span className="font-bold text-gray-900 text-lg min-w-10 text-center mx-2">
-                {currentQuantity}
-              </span>
+              <div className="flex flex-col items-center mx-2">
+                <span className="font-bold text-gray-900 text-lg min-w-10 text-center">
+                  {currentQuantity}
+                </span>
+                {showCount && (
+                  <span className="text-xs text-gray-500">
+                    {availableCount - currentQuantity} ta qoldi
+                  </span>
+                )}
+              </div>
               <button
                 onClick={(e) => handleQuantityClick(e, 1)}
-                className="w-10 h-10 flex items-center justify-center bg-linear-to-r from-orange-500 to-yellow-400 text-white rounded-lg hover:from-orange-600 hover:to-yellow-500 transform hover:-translate-y-0.5 transition-all duration-200 font-bold shadow-md"
+                disabled={isIncrementDisabled()}
+                className="w-10 h-10 flex items-center justify-center bg-linear-to-r from-orange-500 to-yellow-400 text-white rounded-lg hover:from-orange-600 hover:to-yellow-500 transform hover:-translate-y-0.5 transition-all duration-200 font-bold shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 +1
               </button>
               <button
                 onClick={(e) => handleQuantityClick(e, 5)}
-                className="flex w-10 h-10 items-center justify-center bg-linear-to-r from-orange-500 to-yellow-400 text-white rounded-lg hover:from-orange-600 hover:to-yellow-500 transform hover:-translate-y-0.5 transition-all duration-200 font-bold text-sm shadow-md"
+                disabled={isIncrementDisabled()}
+                className="flex w-10 h-10 items-center justify-center bg-linear-to-r from-orange-500 to-yellow-400 text-white rounded-lg hover:from-orange-600 hover:to-yellow-500 transform hover:-translate-y-0.5 transition-all duration-200 font-bold text-sm shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 +5
               </button>
@@ -102,11 +146,39 @@ const ProductCard = ({ product, cart, onQuantityChange }) => {
         ) : (
           <button
             onClick={handleAddToCart}
-            className="w-full py-3 px-4 bg-linear-to-r from-orange-500 to-yellow-400 text-white font-bold rounded-xl hover:from-orange-600 hover:to-yellow-500 transform hover:-translate-y-1 transition-all duration-300 shadow-lg hover:shadow-xl flex items-center justify-center gap-2"
+            disabled={!canAddToCart()}
+            className={`w-full py-3 px-4 bg-linear-to-r ${canAddToCart() ? 'from-orange-500 to-yellow-400 hover:from-orange-600 hover:to-yellow-500' : 'from-gray-400 to-gray-500 cursor-not-allowed'} text-white font-bold rounded-xl transform hover:-translate-y-1 transition-all duration-300 shadow-lg hover:shadow-xl flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:translate-y-0`}
           >
             <i className="fa-solid fa-cart-plus"></i>
-            Sotib olish
+            {showCount && availableCount <= 0 ? 'Tugagan' : 'Sotib olish'}
           </button>
+        )}
+
+        {/* Stock status info for warehouse mode */}
+        {showCount && (
+          <div className="mt-3">
+            {availableCount <= 0 ? (
+              <div className="flex items-center justify-center gap-2 px-3 py-2 bg-red-50 rounded-lg">
+                <i className="fa-solid fa-exclamation-triangle text-red-500"></i>
+                <span className="text-sm text-red-600 font-medium">Mahsulot omborda yoʻq</span>
+              </div>
+            ) : availableCount <= 5 ? (
+              <div className="flex items-center justify-center gap-2 px-3 py-2 bg-yellow-50 rounded-lg">
+                <i className="fa-solid fa-exclamation-circle text-yellow-500"></i>
+                <span className="text-sm text-yellow-700 font-medium">Kam qolgan: {availableCount} ta</span>
+              </div>
+            ) : null}
+          </div>
+        )}
+
+        {/* Barcode display for warehouse mode */}
+        {showCount && product.barcode && (
+          <div className="mt-2 pt-2 border-t border-gray-100">
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-gray-500">Shtrix-kod:</span>
+              <span className="text-xs font-mono bg-gray-100 px-2 py-1 rounded">{product.barcode}</span>
+            </div>
+          </div>
         )}
       </div>
     </div>

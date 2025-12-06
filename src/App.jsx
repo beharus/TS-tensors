@@ -9,7 +9,7 @@ const App = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {id ? <StoreFront storeId={id} /> : <StoreIdForm />}
+      {id ? <StoreFront storeId={id} isWarehouse={false} /> : <StoreIdForm />}
     </div>
   );
 };
