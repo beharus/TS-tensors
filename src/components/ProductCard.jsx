@@ -87,7 +87,7 @@ const ProductCard = ({ product, cart, onQuantityChange, showCount = false }) => 
         {showCount && (
           <div className="absolute top-3 right-3">
             <div className={`px-2 py-1 rounded-full text-base font-bold shadow-lg ${availableCount > 0 ? 'bg-blue-500 text-white' : 'bg-red-500 text-white'}`}>
-              {availableCount > 0 ? `${availableCount} штук` : 'Yoʻq'}
+              {availableCount > 0 ? `${availableCount} шт` : 'Yoʻq'}
             </div>
           </div>
         )}
