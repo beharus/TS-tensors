@@ -86,8 +86,8 @@ const ProductCard = ({ product, cart, onQuantityChange, showCount = false }) => 
         {/* Available count badge for warehouse mode */}
         {showCount && (
           <div className="absolute top-3 right-3">
-            <div className={`px-2 py-1 rounded-full text-xs font-bold shadow-lg ${availableCount > 0 ? 'bg-blue-500 text-white' : 'bg-red-500 text-white'}`}>
-              {availableCount > 0 ? `${availableCount} ta` : 'Yoʻq'}
+            <div className={`px-2 py-1 rounded-full text-base font-bold shadow-lg ${availableCount > 0 ? 'bg-blue-500 text-white' : 'bg-red-500 text-white'}`}>
+              {availableCount > 0 ? `${availableCount} штук` : 'Yoʻq'}
             </div>
           </div>
         )}
