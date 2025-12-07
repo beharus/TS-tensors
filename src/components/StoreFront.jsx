@@ -456,7 +456,7 @@ const StoreFront = ({ isWarehouse = false }) => {
                   </div>
 
                   {/* Mobile: Cart + Scanner Buttons */}
-                  <div className="flex items-center gap-2 lg:hidden">
+                  <div className="flex items-center gap-2 sm:hidden">
                      {/* Scanner Button - Now in header for mobile */}
                      <button
                         onClick={startScanner}
@@ -624,7 +624,7 @@ const StoreFront = ({ isWarehouse = false }) => {
                {/* Cart Summary Button */}
                <button
                   onClick={() => setIsCartOpen(true)}
-                  className="lg:hidden px-4 py-2 bg-linear-to-r from-orange-500 to-yellow-400 text-white font-bold rounded-lg hover:from-orange-600 hover:to-yellow-500 transition-colors shadow-md"
+                  className="md:hidden px-4 py-2 bg-linear-to-r from-orange-500 to-yellow-400 text-white font-bold rounded-lg hover:from-orange-600 hover:to-yellow-500 transition-colors shadow-md"
                >
                   <i className="fa-solid fa-cart-shopping mr-2"></i>
                   {getCartCount()} ta • {new Intl.NumberFormat("uz-UZ").format(getCartTotal())} so'm

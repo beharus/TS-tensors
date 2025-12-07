@@ -4,7 +4,7 @@ import React from 'react';
 const ProductCard = ({ product, cart, onQuantityChange, showCount = false }) => {
   const cartItem = cart.find(item => item.card_id === product.card_id);
   const currentQuantity = cartItem ? cartItem.quantity : 0;
-  
+
   // Get available count from product (for warehouse mode)
   const availableCount = product.count || 0;
 
@@ -17,16 +17,16 @@ const ProductCard = ({ product, cart, onQuantityChange, showCount = false }) => 
     const colors = [
       'bg-white'
     ];
-    
+
     // Convert productId to string and handle different data types
     const idString = String(productId || 'default');
-    
+
     // Simple hash function to get consistent color for same product
     const hash = idString.split('').reduce((a, b) => {
       a = ((a << 5) - a) + b.charCodeAt(0);
       return a & a;
     }, 0);
-    
+
     return colors[Math.abs(hash) % colors.length];
   };
 
@@ -46,12 +46,12 @@ const ProductCard = ({ product, cart, onQuantityChange, showCount = false }) => 
   const handleAddToCart = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    
+
     // Check if product is available (warehouse mode)
     if (showCount && availableCount <= 0) {
       return; // Don't add if no stock available
     }
-    
+
     onQuantityChange(product.card_id, 1);
   };
 
@@ -73,7 +73,7 @@ const ProductCard = ({ product, cart, onQuantityChange, showCount = false }) => 
   };
 
   return (
-    <div className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 hover:-translate-y-2 cursor-pointer">
+    <div className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 hover:-translate-y-2 h-full cursor-pointer flex flex-col">
       {/* Product Image Container with Colored Background */}
       <div className={`h-48 overflow-hidden ${getProductColor(product.card_id)} flex items-center justify-center relative`}>
         <img
@@ -82,7 +82,7 @@ const ProductCard = ({ product, cart, onQuantityChange, showCount = false }) => 
           className="w-full h-full object-contain p-4 hover:scale-105 transition-transform duration-300"
           onError={handleImageError}
         />
-        
+
         {/* Available count badge for warehouse mode */}
         {showCount && (
           <div className="absolute top-3 right-3">
@@ -92,77 +92,76 @@ const ProductCard = ({ product, cart, onQuantityChange, showCount = false }) => 
           </div>
         )}
       </div>
-      
-      <div className="p-4">
-        <h3 className="font-semibold text-gray-900 mb-2 line-clamp-2 min-h-12">
-          {product.name}
-        </h3>
-        
-        <div className="text-xl font-bold text-orange-600 mb-4">
-          {formatPrice(product.price)}
+      <div className="p-4 flex flex-col grow">
+        {/* Product Name with proper truncation */}
+        <div className="relative mb-3 shrink-0">
+          <h3
+            className="font-semibold text-gray-900 min-h-12 mb-2 cursor-default select-none"
+          >
+            {product.name}
+          </h3>
         </div>
 
-        {currentQuantity > 0 ? (
-          <div className="flex items-center justify-between bg-gray-50 rounded-xl p-2">
-            <div className="flex items-center gap-1 flex-1 justify-between">
-              <button
-                onClick={(e) => handleQuantityClick(e, -5)}
-                className="flex w-10 h-10 items-center justify-center bg-linear-to-r from-orange-500 to-yellow-400 text-white rounded-lg hover:from-orange-600 hover:to-yellow-500 transform hover:-translate-y-0.5 transition-all duration-200 font-bold text-sm shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                -5
-              </button>
-              <button
-                onClick={(e) => handleQuantityClick(e, -1)}
-                className="w-10 h-10 flex items-center justify-center bg-linear-to-r from-orange-500 to-yellow-400 text-white rounded-lg hover:from-orange-600 hover:to-yellow-500 transform hover:-translate-y-0.5 transition-all duration-200 font-bold shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                -1
-              </button>
-              <div className="flex flex-col items-center mx-2">
-                <span className="font-bold text-gray-900 text-lg min-w-10 text-center">
-                  {currentQuantity}
-                </span>
-                {showCount && (
-                  <span className="text-xs text-gray-500">
-                    {availableCount - currentQuantity} ta qoldi
-                  </span>
-                )}
-              </div>
-              <button
-                onClick={(e) => handleQuantityClick(e, 1)}
-                disabled={isIncrementDisabled()}
-                className="w-10 h-10 flex items-center justify-center bg-linear-to-r from-orange-500 to-yellow-400 text-white rounded-lg hover:from-orange-600 hover:to-yellow-500 transform hover:-translate-y-0.5 transition-all duration-200 font-bold shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                +1
-              </button>
-              <button
-                onClick={(e) => handleQuantityClick(e, 5)}
-                disabled={isIncrementDisabled()}
-                className="flex w-10 h-10 items-center justify-center bg-linear-to-r from-orange-500 to-yellow-400 text-white rounded-lg hover:from-orange-600 hover:to-yellow-500 transform hover:-translate-y-0.5 transition-all duration-200 font-bold text-sm shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                +5
-              </button>
-            </div>
+        {/* Content that stays at the bottom */}
+        <div className="mt-auto space-y-4">
+          {/* Price */}
+          <div className="text-xl font-bold text-orange-600">
+            {formatPrice(product.price)}
           </div>
-        ) : (
-          <button
-            onClick={handleAddToCart}
-            disabled={!canAddToCart()}
-            className={`w-full py-3 px-4 bg-linear-to-r ${canAddToCart() ? 'from-orange-500 to-yellow-400 hover:from-orange-600 hover:to-yellow-500' : 'from-gray-400 to-gray-500 cursor-not-allowed'} text-white font-bold rounded-xl transform hover:-translate-y-1 transition-all duration-300 shadow-lg hover:shadow-xl flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:translate-y-0`}
-          >
-            <i className="fa-solid fa-cart-plus"></i>
-            {showCount && availableCount <= 0 ? 'Tugagan' : 'Sotib olish'}
-          </button>
-        )}
 
-        {/* Barcode display for warehouse mode */}
-        {showCount && product.barcode && (
-          <div className="mt-2 pt-2 border-t border-gray-100">
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-gray-500">Shtrix-kod:</span>
-              <span className="text-xs font-mono bg-gray-100 px-2 py-1 rounded">{product.barcode}</span>
+          {/* Quantity controls or Add to Cart button */}
+          {currentQuantity > 0 ? (
+            <div className="bg-gray-50 rounded-xl p-2">
+              <div className="flex items-center justify-between gap-1">
+                <button
+                  onClick={(e) => handleQuantityClick(e, -5)}
+                  className="flex w-10 h-10 items-center justify-center bg-linear-to-r from-orange-500 to-yellow-400 text-white rounded-lg hover:from-orange-600 hover:to-yellow-500 transform hover:-translate-y-0.5 transition-all duration-200 font-bold text-sm shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  -5
+                </button>
+                <button
+                  onClick={(e) => handleQuantityClick(e, -1)}
+                  className="w-10 h-10 flex items-center justify-center bg-linear-to-r from-orange-500 to-yellow-400 text-white rounded-lg hover:from-orange-600 hover:to-yellow-500 transform hover:-translate-y-0.5 transition-all duration-200 font-bold shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  -1
+                </button>
+                <div className="flex flex-col items-center mx-1">
+                  <span className="font-bold text-gray-900 text-lg min-w-10 text-center">
+                    {currentQuantity}
+                  </span>
+                  {showCount && (
+                    <span className="text-xs text-gray-500">
+                      {availableCount - currentQuantity} ta qoldi
+                    </span>
+                  )}
+                </div>
+                <button
+                  onClick={(e) => handleQuantityClick(e, 1)}
+                  disabled={isIncrementDisabled()}
+                  className="w-10 h-10 flex items-center justify-center bg-linear-to-r from-orange-500 to-yellow-400 text-white rounded-lg hover:from-orange-600 hover:to-yellow-500 transform hover:-translate-y-0.5 transition-all duration-200 font-bold shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  +1
+                </button>
+                <button
+                  onClick={(e) => handleQuantityClick(e, 5)}
+                  disabled={isIncrementDisabled()}
+                  className="flex w-10 h-10 items-center justify-center bg-linear-to-r from-orange-500 to-yellow-400 text-white rounded-lg hover:from-orange-600 hover:to-yellow-500 transform hover:-translate-y-0.5 transition-all duration-200 font-bold text-sm shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  +5
+                </button>
+              </div>
             </div>
-          </div>
-        )}
+          ) : (
+            <button
+              onClick={handleAddToCart}
+              disabled={!canAddToCart()}
+              className={`w-full py-3 px-4 bg-linear-to-r ${canAddToCart() ? 'from-orange-500 to-yellow-400 hover:from-orange-600 hover:to-yellow-500' : 'from-gray-400 to-gray-500 cursor-not-allowed'} text-white font-bold rounded-xl transform hover:-translate-y-1 transition-all duration-300 shadow-lg hover:shadow-xl flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:translate-y-0`}
+            >
+              <i className="fa-solid fa-cart-plus"></i>
+              {showCount && availableCount <= 0 ? 'Tugagan' : 'Sotib olish'}
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
