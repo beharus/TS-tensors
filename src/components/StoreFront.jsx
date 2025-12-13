@@ -454,7 +454,7 @@ const StoreFront = ({ isWarehouse = false }) => {
                         )}
                      </button>
                   </div>
-
+                  
                   {/* Mobile: Cart + Scanner Buttons */}
                   <div className="flex items-center gap-2 sm:hidden">
                      {/* Scanner Button - Now in header for mobile */}
